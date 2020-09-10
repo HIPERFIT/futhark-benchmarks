@@ -32,13 +32,15 @@ let equal(x1: f32, x2: f32): bool =
 let date_act_365(t1: date, t2: date): f32 = f32.f64 (diff_dates t2 t1)
 
 let add_years(date: date, nbyears: f32): date =
-  add_months date (t32 (nbyears * 12.0))
+  add_months date (i32.f32 (nbyears * 12.0))
 
 let max_date = date_of_triple (2229, 12, 31)
 
 let min_date = date_of_triple (1980, 1, 1)
 
 let today = date_of_triple (2012, 1, 1)
+
+let iota32 n = 0..1..<i32.i64 n :> [n]i32
 
 ----------------------------------------------------------------
 ----/ G2PP Module
@@ -193,15 +195,15 @@ let rootFinding_Brent(fid: i32, scalesbbi: [](f32,f32), lb: f32, ub: f32, tol: f
 
 let sobolInd [m] (dirVct:  [m]i32) (n: i32): f32 =
     -- placed norm_fact here to check that hoisting does its job!
-    let norm_fact = 1.0 / ( r32(1 << m) + 1.0 )
+    let norm_fact = 1.0 / ( f32.i64(1 << m) + 1.0 )
     let n_gray = (n >> 1) ^ n
     let res = 0 in
-    let res = loop (res) for i < m do
+    let res = loop (res) for i < i32.i64 m do
         let t = 1 << i in
         if (n_gray & t) == t
         then res ^ dirVct[i]
         else res
-    in  r32(res) * norm_fact
+    in  f32.i32(res) * norm_fact
 
 ----------------------------------------------------
 --/ Prepares the output summary for each swaption
@@ -288,9 +290,10 @@ let mutate_dims_all [n] (tup: ([n]f32,[]f32,[]f32)): (*[n]f32,f32) =
 let mutate_dims_one [n] (dim_j: i32) (tup: ([]f32,[n]f32,[]f32)): (*[n]f32,f32) =
   let (sob_row, orig, muta) = tup
   let gene_bds = take n genomeBounds
-  let amplitudes= map (\(i: i32): f32  ->
-                          if i == dim_j then moves_unif_ampl_ratio() else 0.0
-                     ) (iota(n) )
+  let amplitudes= map (\i ->
+                         if i32.i64 i == dim_j
+                         then moves_unif_ampl_ratio() else 0.0)
+                      (iota n)
 
   let gene_rats = map mutateHelper (zip5 amplitudes (sob_row) orig muta (gene_bds) )
   let (tmp_genome, fb_rats) = unzip(gene_rats)
@@ -484,7 +487,7 @@ let evalGenomeOnSwap (genomea: []f32,
   let (a,b,rho,nu,sigma) = (genomea[0],genomea[1],genomea[2],genomea[3],genomea[4])
   let swap_freq  = swaption[1]
   let maturity   = add_years( today, swaption[0] )
-  let n_schedi   = t32(12.0 * swaption[2] / swap_freq)
+  let n_schedi   = i64.f32(12.0 * swaption[2] / swap_freq)
 
   let tmat0      = date_act_365( maturity, today )
 
@@ -495,11 +498,11 @@ let evalGenomeOnSwap (genomea: []f32,
   --   and hoisted outside the swaption
   --   and convergence loop ...
   ----------------------------------------
-  let a12s = map  (\(i: i32): (f32,date,date) ->
-                     let a1 = add_months maturity (t32(swap_freq*r32(i)))
-                     let a2 = add_months a1 (t32 swap_freq) in
-                     ( zc(a2) * date_act_365(a2, a1), a1, a2 )
-                 ) (iota(n_schedi) )
+  let a12s = map  (\i: (f32,date,date) ->
+                     let a1 = add_months maturity (i32.f32(swap_freq*f32.i64(i)))
+                     let a2 = add_months a1 (i32.f32 swap_freq) in
+                     ( zc(a2) * date_act_365(a2, a1), a1, a2 ))
+                  (iota n_schedi)
   let (lvl, t0, tn) = reduce (\((lvl,t0,tn): (f32,date,date))
                                ((a12,a1,a2): (f32,date,date)): (f32,date,date) ->
                               ( lvl + a12, earliest t0 a1, latest tn a2)
@@ -527,9 +530,9 @@ let evalGenomeOnSwap (genomea: []f32,
 
   -- computing n_schedi-size temporary arrays
   let (tmp_arrs_a, tmp_arrs_b) = unzip <|
-          map (\(i: i32): ((f32,f32,f32,f32),(f32,f32,f32))  ->
-                 let beg_date = add_months maturity (t32 (swap_freq*r32(i) ))
-                 let end_date = add_months beg_date (t32 swap_freq)
+          map (\i  ->
+                 let beg_date = add_months maturity (i32.f32 (swap_freq*f32.i64(i) ))
+                 let end_date = add_months beg_date (i32.f32 swap_freq)
                  let res      = date_act_365( end_date, beg_date ) * strike
                  let cii      = if i==(n_schedi-1) then 1.0 + res  else res
 
@@ -558,9 +561,9 @@ let evalGenomeOnSwap (genomea: []f32,
 
   -- exactYhat via Brent method
   let eps = 0.5 * sigmax
-  let f   = exactYhat( n_schedi, scals, exact_arrs, mux       )
-  let g   = exactYhat( n_schedi, scals, exact_arrs, mux + eps )
-  let h   = exactYhat( n_schedi, scals, exact_arrs, mux - eps )
+  let f   = exactYhat( i32.i64 n_schedi, scals, exact_arrs, mux       )
+  let g   = exactYhat( i32.i64 n_schedi, scals, exact_arrs, mux + eps )
+  let h   = exactYhat( i32.i64 n_schedi, scals, exact_arrs, mux - eps )
 
   -- integration with Hermite polynomials
   let herm_arrs   = zip4 bbs scales cs (t1_cs )
@@ -629,12 +632,12 @@ let interestCalibKernel(pop:  i32
                        , sobDirVct: []i32
                        ): (f32,f32,f32,f32,f32,f32,[][]f32) =
   -- initialize the genomes
-  let genomes = map  (\(i: i32)  ->
-                        let k   = 5*i + 1
-                        let z5s = map  (+k) (iota(5) )
+  let genomes = map  (\i  ->
+                        let k   = 5*i32.i64 i + 1
+                        let z5s = map  (+k) (iota32 5)
                         let sobs= map  (sobolInd(sobDirVct)) z5s
                         in  initGenome( copy(sobs) )
-                    ) (iota(pop) )
+                    ) (iota(i64.i32 pop))
   -- evaluate genomes
   let logLiks = map  (\(genome: []f32): f32  ->
                         let qtprs = map  (evalGenomeOnSwap(genome,hermdata)
@@ -656,11 +659,11 @@ let interestCalibKernel(pop:  i32
       let (proposals, fb_rats, sob_offs) =
         if (move_type == 1) --  move_type == DIMS_ALL
         then let sob_mat =
-                 map (\(i: i32) ->
-                        let k   = 5*i + sob_offs
-                        let z5s = map (+k) (iota(5) ) in
+                 map (\i ->
+                        let k   = 5*i32.i64 i + sob_offs
+                        let z5s = map (+k) (iota32 5) in
                         map  (sobolInd(sobDirVct)) z5s
-                    ) (iota(pop) )
+                    ) (iota (i64.i32 pop))
              let new_gene_rat =
                  map mutate_dims_all (zip3 (sob_mat) genomes proposals )
              let (new_genomes, fb_rats) = unzip(new_gene_rat)
@@ -669,13 +672,13 @@ let interestCalibKernel(pop:  i32
         else
         if (move_type == 2) -- move_type == DIMS_ONE
         then let s1  = sobolInd sobDirVct sob_offs
-             let dim_j = t32( s1 * r32(5) )
+             let dim_j = i32.f32( s1 * f32.i32(5) )
              let sob_mat =
-                 map (\(i: i32)  ->
-                        let k   = 5*i + sob_offs + 1
-                        let z5s = map (+k) (iota(5)) in
+                 map (\i  ->
+                        let k   = 5*i32.i64 i + sob_offs + 1
+                        let z5s = map (+k) (iota32 5) in
                         map  (sobolInd(sobDirVct)) z5s
-                    ) (iota(pop) )
+                    ) (iota(i64.i32 pop) )
 
              let new_gene_rat =
                  map (mutate_dims_one(dim_j)) (zip3 (sob_mat) genomes proposals )
@@ -684,26 +687,26 @@ let interestCalibKernel(pop:  i32
 
         else                -- move_type == DEMCMC
              let new_genomes =
-                 map (\(i: i32)  ->
+                 map (\i  ->
                         let kk  = 8*i + sob_offs
                         let s1  = sobolInd sobDirVct kk
-                        let k = t32( s1 * r32(pop-1) )  -- random in [0,pop-1)
+                        let k = i32.f32( s1 * f32.i32(pop-1) )  -- random in [0,pop-1)
                         let (k,cand_UB) = if k == i
                                           then (pop-1, pop-2)
                                           else (k,     pop-1)
 
                         let s2  = sobolInd sobDirVct (kk+1)
-                        let l = t32( s2*r32(cand_UB) ) -- random in [0,cand_UB -1)
+                        let l = i32.f32( s2*f32.i32(cand_UB) ) -- random in [0,cand_UB -1)
                         let l = if (l == i) || (l == k)
                                 then cand_UB
                                 else l
 
                         let s3      = sobolInd sobDirVct (kk+2)
-                        let z5s     = map (+(kk+3)) (iota(5) )
+                        let z5s     = map (+(kk+3)) (iota32 5)
                         let sob_row = map (sobolInd(sobDirVct)) z5s in
                             mcmc_DE(s3, sob_row, genomes[i], genomes[k], genomes[l])
-                    ) (iota(pop) )
-             in  (new_genomes, replicate pop 1.0, sob_offs+8*pop)
+                    ) (map i32.i64 (iota(i64.i32 pop)))
+             in  (new_genomes, replicate (i64.i32 pop) 1.0, sob_offs+8*pop)
 
       let new_logLiks =
           map  (\(genome: []f32): f32  ->
@@ -721,7 +724,7 @@ let interestCalibKernel(pop:  i32
                        then (new_gene, new_logLik)
                        else (gene,     logLik    )
                  in (copy(res_gene), res_logLik)
-             ) (zip4 genomes logLiks proposals (zip3 (new_logLiks) (fb_rats) (iota(pop)))
+             ) (zip4 genomes logLiks proposals (zip3 (new_logLiks) (fb_rats) (map i32.i64 (iota(i64.i32 pop))))
              )
 
       let (res_genomes, res_logLiks) = unzip(res_gene_liks) in
@@ -733,7 +736,7 @@ let interestCalibKernel(pop:  i32
       reduce (\(t1: (i32,f32)) (t2: (i32,f32)): (i32,f32)  ->
                 let (i1, v1) = t1 let (i2, v2) = t2 in
                 if (v1 < v2) then (i2, v2) else (i1, v1)
-            ) (0, -f32.inf) (zip (iota(pop)) logLiks
+            ) (0, -f32.inf) (zip (map i32.i64 (iota(i64.i32 pop))) logLiks
             )
 
   let winner = genomes[winner_ind]
@@ -759,13 +762,13 @@ let interestCalibKernel(pop:  i32
 let extended_swaption_of_swaption(swaption: (f32,f32,f32)): (date,[](date,date),(f32,f32))  =  -- swaption = (sw_mat, freq, sw_ty)
     let (sw_mat, freq, sw_ty) = swaption
     let maturity   = add_years( today, sw_mat )
-    let nschedule  = t32(12.0 * sw_ty / freq)
+    let nschedule  = i32.f32(12.0 * sw_ty / freq)
 
     let a12s = map  (\(i: i32): (f32,date,date)  ->
-                     let a1 = add_months maturity (t32 (freq*r32 i))
-                     let a2 = add_months a1 (t32 freq)
+                     let a1 = add_months maturity (i32.f32 (freq*f32.i32 i))
+                     let a2 = add_months a1 (i32.f32 freq)
                      in ( zc(a2) * date_act_365(a2, a1), a1, a2 )
-                 ) (iota(nschedule) )
+                 ) (map i32.i64 (iota(i64.i32 nschedule) ))
 
     let (lvl, t0, tn) = reduce (\((lvl,t0,tn):  (f32,date,date))
                                  ((a12,a1,a2): (f32,date,date)): (f32,date,date)  ->
@@ -822,7 +825,7 @@ let pricer_of_swaption(today:  date,
     let (maturity, schedulei, (strike,_)) = swaption
 
     let n_schedi = length schedulei
-    let ci = map (\(i: i32): f32  ->
+    let ci = map (\i  ->
                         let (d_beg,d_end) = schedulei[i]
                         let tau = date_act_365(d_end,d_beg)in
                         if(i == n_schedi-1)
@@ -881,9 +884,9 @@ let pricer_of_swaption(today:  date,
     let scals   = (b, sigmax, sigmay, rhoxy, rhoxyc, rhoxycs, mux, muy)
 
     let eps = 0.5 * sigmax
-    let f   = exactYhat( n_schedi, scals, babaici, mux       )
-    let g   = exactYhat( n_schedi, scals, babaici, mux + eps )
-    let h   = exactYhat( n_schedi, scals, babaici, mux - eps )
+    let f   = exactYhat( i32.i64 n_schedi, scals, babaici, mux       )
+    let g   = exactYhat( i32.i64 n_schedi, scals, babaici, mux + eps )
+    let h   = exactYhat( i32.i64 n_schedi, scals, babaici, mux - eps )
     let df  = 0.5 * ( g - h ) / eps
 
     let sqrt2sigmax = f32.sqrt(2.0) * sigmax

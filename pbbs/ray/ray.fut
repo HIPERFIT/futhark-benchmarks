@@ -97,7 +97,7 @@ let main [npoints][ntriangles][nrays]
   -- Despite what the documentation says, the point indices are
   -- actually 1-based.
   let to_triangle t i =
-    {a=points[t[0]-1], b=points[t[1]-1], c=points[t[2]-1], index=i}
+    {a=points[t[0]-1], b=points[t[1]-1], c=points[t[2]-1], index=i32.i64 i}
   let triangles = map2 to_triangle triangles_enc (iota ntriangles)
 
   let to_ray r = {orig = to_point r[0], dir = to_point r[1]}

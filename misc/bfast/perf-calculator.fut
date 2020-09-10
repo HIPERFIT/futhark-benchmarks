@@ -4,8 +4,8 @@ entry main [m'][N'] (_trend: i32) (k': i32) (n': i32) (_freq: f32)
                   (_images : [m'][N']f32) =
     let k = u64.i32 k'
     let n = u64.i32 n'
-    let m = u64.i32 m'
-    let N = u64.i32 N'
+    let m = u64.i64 m'
+    let N = u64.i64 N'
 
     let K = 2*k+2
 
@@ -42,7 +42,7 @@ entry main [m'][N'] (_trend: i32) (k': i32) (n': i32) (_freq: f32)
     let sgmred_words = m * (2*n+3)
 
     -- 9. moving-sums-fst; MO_fsts = ...  I AM HERE!!!
-    let hmax = u64.i32 <| t32 <| (r32 <| i32.u64 n) * hfrac
+    let hmax = u64.f32 <| (f32.u64 n) * hfrac
     let mvsfst_flops = m * (1 + hmax)
     let mvsfst_words = m * (4 + hmax)
 

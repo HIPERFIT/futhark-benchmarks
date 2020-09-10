@@ -17,8 +17,8 @@ let max_arcmin: f64 = 10000.0
 let bins_per_dec: f64 = 5.0
 let numBins: i32 = 20
 
-let iota32 (num: i32): [num]f64 =
-  map f64.i32 (iota num)
+let iota32 (num: i64): [num]f64 =
+  map f64.i64 (iota num)
 
 let sumBins [numBins][numBinss] (bins: [numBinss][numBins]i32): *[numBins]i32 =
   map1 i32.sum (transpose bins)
@@ -28,7 +28,7 @@ let log10 (num: f64): f64 = f64.log(num) / f64.log(10.0)
 let doCompute [numD][numBBins]
               (datapoints: [numD]vec3)
               (random: [numD]vec3)
-              (numBins2: i32)
+              (numBins2: i64)
               (binb: [numBBins]f64)
              : [numBins2]i32 =
   let f k =
@@ -50,14 +50,14 @@ let doCompute [numD][numBBins]
                     then max+1
                     else max
 
-    in index
+    in i64.i32 index
 
   let l = numD * numD
   in reduce_by_index (replicate numBins2 0) (+) 0 (tabulate l f) (replicate l 1)
 
 let doComputeSelf [numD][numBBins]
                   (datapoints: [numD]vec3)
-                  (numBins2: i32)
+                  (numBins2: i64)
                   (binb: [numBBins]f64)
                  : [numBins2]i32 =
   let f k =
@@ -80,7 +80,7 @@ let doComputeSelf [numD][numBBins]
                          then max+1
                          else max
 
-         in index
+         in i64.i32 index
   let l = numD * numD
   in reduce_by_index (replicate numBins2 0) (+) 0 (tabulate l f) (replicate l 1)
 
@@ -96,11 +96,11 @@ let main [numD][numRs]
          (randompointsx: [numRs][numD]f64)
          (randompointsy: [numRs][numD]f64)
         : *[60]i32 =
-  let numBins2 = numBins + 2
+  let numBins2 = i64.i32 numBins + 2
   let binb = map (\k ->
                     f64.cos((10.0 ** (log10(min_arcmin) + k*1.0/bins_per_dec))
                             / 60.0 * dec2rad(1.0)))
-                 (iota32(numBins + 1))
+                 (iota32(i64.i32 numBins + 1))
   let datapoints = map2 fixPoints datapointsx datapointsy
   let randompoints = map2 (map2 fixPoints) randompointsx randompointsy
   let (drs, rrs) = unzip (map (\random ->

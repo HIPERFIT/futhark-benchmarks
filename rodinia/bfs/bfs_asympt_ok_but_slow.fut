@@ -38,7 +38,7 @@ let step [n][e]
         (updating_graph_mask: *[n]bool) : (*[n]i32, *[n]bool, *[n]bool) =
   let (active_indices, _) = unzip (filter (.1) (zip (iota n) graph_mask))
   let n_indices = length active_indices
-  let active_indices = active_indices :> [n_indices]i32
+  let active_indices = active_indices :> [n_indices]i64
   let graph_mask' =
     scatter graph_mask active_indices (map (const false) active_indices)
 
@@ -48,13 +48,13 @@ let step [n][e]
   let active_costs   = map (\tid -> #[unsafe] (cost[tid])) active_indices
   let active_edges   = map (\tid -> #[unsafe] (nodes_n_edges[tid])) active_indices
   let scan_num_edges = scan (+) 0i32 active_edges
-  let flat_len       = scan_num_edges[n_indices-1]
+  let flat_len       = i64.i32 scan_num_edges[n_indices-1]
   let (tmp1, tmp2, tmp3) = (replicate flat_len false,
                             replicate flat_len 0i32,
                             replicate flat_len 1i32)
-  let write_inds     = map (\i -> if i==0i32 then 0i32 else #[unsafe] scan_num_edges[i-1]) (iota n_indices)
+  let write_inds     = map (\i -> if i==0 then 0 else #[unsafe] i64.i32 scan_num_edges[i-1]) (iota n_indices)
   let active_flags   = scatter tmp1 write_inds (replicate n_indices true)
-  let track_nodes_tmp= scatter tmp2 write_inds (iota n_indices) --active_indices
+  let track_nodes_tmp= scatter tmp2 write_inds (map i32.i64 (iota n_indices))
   let active_starts  = map (\tid -> #[unsafe] (nodes_start_index[tid])) active_indices
   let track_index_tmp= scatter tmp3 write_inds active_starts
 
@@ -76,7 +76,7 @@ let step [n][e]
   let changes = map2(\row edge_index ->
                       let node_id = #[unsafe] edges_dest[edge_index]
                       in  if !(#[unsafe] graph_visited[node_id])
-                          then (node_id, #[unsafe] active_costs[row]+1)
+                          then (i64.i32 node_id, #[unsafe] active_costs[row]+1)
                           else (-1, -1)
                     ) track_nodes track_index
 

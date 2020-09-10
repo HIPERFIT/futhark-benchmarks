@@ -10,7 +10,7 @@ let findLeaf [q][d] (median_dims: [q]i32) (median_vals: [q]f32)
         if query[median_dims[node_index]] <= median_vals[node_index]
         then (node_index+1)*2-1
         else (node_index+1)*2
-  in leaf - q
+  in leaf - i32.i64 q
 
 -- This is implemented for 1-dim
 -- height: the height of the tree (without leaves)
@@ -30,7 +30,7 @@ let traverseOnce [q] [d] (height: i32)
                  (last_leaf: i32, stack: i32, dist: f32) : (i32, i32, f32) =
 
   let (median_dims, median_vals, clanc_eqdim) = unzip3 kd_tree
-  let last_leaf = last_leaf + q
+  let last_leaf = last_leaf + i32.i64 q
   let no_leaf   = 2*q + 1
 
   -- helper functions for reading and writing the stack,
@@ -96,7 +96,7 @@ let traverseOnce [q] [d] (height: i32)
       if parent_rec == 0 && rec_node == -1
       then -- we are done, we are at the root node
            -- and its second child has been visited
-           (no_leaf, stack, 0)
+           (i32.i64 no_leaf, stack, 0)
 
       else -- now traverse downwards by computing `first`
            -- and stop when you discovered a new leaf
@@ -112,4 +112,4 @@ let traverseOnce [q] [d] (height: i32)
                   else (node_index+1)*2
               in (node_index, stack, count)
 
-  in (new_leaf-q, new_stack, dist)
+  in (new_leaf-i32.i64 q, new_stack, dist)

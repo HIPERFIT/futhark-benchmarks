@@ -16,7 +16,7 @@ let r_squared_mod_p = "329490647479426544212979752063071073927857568219980068178
 module type field_params = {
   module LVec: vector -- static vector to hold the limbs
 
-  val limbs : i32  -- Number of limbs
+  val limbs : i64  -- Number of limbs
   val p: () -> []u8 -- Size of prime field
   val r2: () -> []u8 -- R^2 mod p
 }
@@ -26,8 +26,8 @@ module type fieldtype = {
   module LVec: vector
   type t
 
-  val limbs: i32 -- number of limbs
-  val double_limbs: i32 -- 2 x number of limbs
+  val limbs: i64 -- number of limbs
+  val double_limbs: i64 -- 2 x number of limbs
   val num_bits: i32
   val zero: t
   val one: t
@@ -181,7 +181,7 @@ module type field = {
   val add_with_carry: s -> s -> (s, s)
   val add2_with_carry: s -> s -> s -> (s, s)
 
-  val LIMBS: i32
+  val LIMBS: i64
   val FIELD_P: t
   val FIELD_R2: t
   val FIELD_P_DIFF: t
@@ -220,10 +220,10 @@ module big_field (M: fieldtype): field = {
   type s = M.t
   type double_t = LVec2.vector s --[DOUBLE_LIMBS]s
 
-  let digit_count: i32 =
+  let digit_count: i64 =
     let digits_per_byte = f64.log10(2 ** 8) in
-    let bytes = LIMBS * (M.num_bits / 8) in
-    i32.f64 (f64.ceil ((f64.i32 bytes) * digits_per_byte))
+    let bytes = LIMBS * (i64.i32 M.num_bits / 8) in
+    i64.f64 (f64.ceil ((f64.i64 bytes) * digits_per_byte))
 
   type es = [digit_count]u8
 
@@ -235,7 +235,7 @@ module big_field (M: fieldtype): field = {
   let one: t = LVec.map (\x -> if x == 0 then M.one else M.zero) LVec.iota
 
   let highest: t = LVec.replicate M.highest
-  let fill (v: s) (count: i32) : t = LVec.map (\x -> if x < count then v else M.zero) LVec.iota
+  let fill (v: s) (count: i32) : t = LVec.map (\x -> if i32.i64 x < count then v else M.zero) LVec.iota
 
   let double_highest: double_t = LVec2.map (\i -> if i < LIMBS then M.highest else M.zero) LVec2.iota
 
@@ -329,10 +329,10 @@ module big_field (M: fieldtype): field = {
     (lo, c)
 
   let double_in_field (a: double_t) (f: t): bool =
-      all (\i -> M.(LVec2.get i32.(i + limbs) a == zero)) (iota LIMBS) &&
+      all (\i -> M.(LVec2.get i64.(i + limbs) a == zero)) (iota LIMBS) &&
       --(f == zero) || -- Why isn't this equivalent to the next line?
       if f == zero then true else
-      let (acc, _) = loop (acc, i) = (true, LIMBS - 1) while acc && (i i32.>= 0) do
+      let (acc, _) = loop (acc, i) = (true, LIMBS - 1) while acc && (i i64.>= 0) do
                        if M.(LVec2.get i a < (LVec.get i f)) then (true, -1) else
                          (M.(LVec2.get i a == (LVec.get i f)), i - 1) in
       acc
@@ -382,7 +382,7 @@ module big_field (M: fieldtype): field = {
 
   let DOUBLE_FIELD_P: double_t =
     let fp = copy FIELD_P in
-    LVec2.map (\i -> if i i32.< LIMBS then LVec.get i fp else M.zero) LVec2.iota
+    LVec2.map (\i -> if i i64.< LIMBS then LVec.get i fp else M.zero) LVec2.iota
 
   let FIELD_P_DIFF = sub zero FIELD_P
 
@@ -419,7 +419,7 @@ module big_field (M: fieldtype): field = {
        in if result >= FIELD_P then sub result FIELD_P else result
 
   let final_reduce (v: t): t =
-    let double = LVec2.map (\i -> if i i32.< LIMBS then LVec.get i v else M.zero) LVec2.iota in
+    let double = LVec2.map (\i -> if i i64.< LIMBS then LVec.get i v else M.zero) LVec2.iota in
     mont_reduce double
 
   let R_MOD_P = if FIELD_P == zero then zero else simple_reduce DOUBLE_R
@@ -492,29 +492,29 @@ module big_field (M: fieldtype): field = {
     -- Long multiplication (Diagonal elements are skipped)
     let (res: double_t) = LVec2.replicate M.zero in
     let res =
-      loop res for i < i32.(LIMBS-1) do
+      loop res for i < i64.(LIMBS-1) do
       let (res, carry, _) =
-        loop (res, carry, j) = (res, M.zero, i32.(i + 1)) while i32.(j < LIMBS) do
-         let (sum, carry) = mac_with_carry (LVec.get i x) (LVec.get j x) (LVec2.get i32.(i+j) res) carry
-         in (LVec2.set i32.(i+j) sum res, carry, i32.(j+1))
-      in LVec2.set i32.(i + LIMBS) carry res in
+        loop (res, carry, j) = (res, M.zero, i64.(i + 1)) while i64.(j < LIMBS) do
+         let (sum, carry) = mac_with_carry (LVec.get i x) (LVec.get j x) (LVec2.get i64.(i+j) res) carry
+         in (LVec2.set i64.(i+j) sum res, carry, i64.(j+1))
+      in LVec2.set i64.(i + LIMBS) carry res in
 
     --  Double the result
-    let res = LVec2.set i32.(LIMBS * 2 - 1) ((copy (LVec2.get i32.(LIMBS * 2 - 2) res)) M.>> i32.(M.num_bits - 1)) res in
+    let res = LVec2.set i64.(LIMBS * 2 - 1) ((copy (LVec2.get i64.(LIMBS * 2 - 2) res)) M.>> i32.(M.num_bits - 1)) res in
     let (res, _) =
-      loop (res, i) = (res, i32.(LIMBS * 2 - 2)) while i32.(i > 1) do
-      let res = LVec2.set i M.((copy (LVec2.get i res) << 1) | ((copy (LVec2.get i32.(i - 1) res)) >> i32.(M.num_bits - 1))) res in
-      (res, i32.(i - 1))
+      loop (res, i) = (res, i64.(LIMBS * 2 - 2)) while i64.(i > 1) do
+      let res = LVec2.set i M.((copy (LVec2.get i res) << 1) | ((copy (LVec2.get i64.(i - 1) res)) >> i32.(M.num_bits - 1))) res in
+      (res, i64.(i - 1))
     in let res = LVec2.set 1 M.(copy (LVec2.get 1 res) << 1) res in
 
     --  Process diagonal elements
     let (_, _, res) =
-      loop (i, carry, res) = (0, M.zero, res) while i32.(i < LIMBS) do
-      let (a, carry) = mac_with_carry (LVec.get i x) (LVec.get i x) (copy (LVec2.get i32.(i * 2) res)) carry in
-      let (b, carry) = add_with_carry (copy (LVec2.get i32.(i * 2 + 1) res)) carry in
-      (i i32.+ 1,
+      loop (i, carry, res) = (0, M.zero, res) while i64.(i < LIMBS) do
+      let (a, carry) = mac_with_carry (LVec.get i x) (LVec.get i x) (copy (LVec2.get i64.(i * 2) res)) carry in
+      let (b, carry) = add_with_carry (copy (LVec2.get i64.(i * 2 + 1) res)) carry in
+      (i i64.+ 1,
        carry,
-       (LVec2.set i32.(i * 2 + 1) b (LVec2.set i32.(i * 2) a res)))
+       (LVec2.set i64.(i * 2 + 1) b (LVec2.set i64.(i * 2) a res)))
 
     in mont_reduce res
 
@@ -529,7 +529,7 @@ module big_field (M: fieldtype): field = {
   let s_from_u64 (n: u64): s = M.from_u64 n
 
   let from_u64s [n] (limbs: [n]u64): t =
-    assert i32.((length limbs) == LIMBS) (LVec.map M.from_u64 (LVec.from_array (limbs :> [LVec.length]u64)) :> t)
+    assert i64.((length limbs) == LIMBS) (LVec.map M.from_u64 (LVec.from_array (limbs :> [LVec.length]u64)) :> t)
 
   -- For use in tests, return true if its argument is actually in the field.
   let in_field (x: t): bool =
@@ -544,7 +544,7 @@ let mont_from_u8 (n: u8): t = to_mont (fill (M.from_u8 n) 1)
   let mont_from_u64 (n: u64): t = to_mont (fill (M.from_u64 n) 1)
 
 let mont_from_u64s [n] (limbs: [n]u64): t =
-  assert i32.((length limbs) == LIMBS) (to_mont (LVec.map M.from_u64 (LVec.from_array (limbs :> [LVec.length]u64)) :> t))
+  assert i64.((length limbs) == LIMBS) (to_mont (LVec.map M.from_u64 (LVec.from_array (limbs :> [LVec.length]u64)) :> t))
 
   let mont_to_u64s (limbs: t): [LIMBS]u64 =
     LVec.to_array (LVec.map M.to_u64 (final_reduce limbs)) :> [LIMBS]u64
@@ -574,7 +574,7 @@ let mont_from_u64s [n] (limbs: [n]u64): t =
 --                                              let r2 () = "" })
 
 module b8': field = big_field (fieldtype u8 { module LVec = vector_1
-                                              let limbs = 1i32
+                                              let limbs = 1i64
                                               let p () = "251"
                                               let r2 () = "25" })
 -- -- module b16: field = big_field (fieldtype u8 { let limbs = 2i32
@@ -583,6 +583,6 @@ module b8': field = big_field (fieldtype u8 { module LVec = vector_1
 
 module bls12_381: field = big_field (fieldtype u64 {
                                                  module LVec = vector_4
-                                                 let limbs = 4i32
+                                                 let limbs = 4i64
                                                  let p () = copy bls12_381_modulus
                                                  let r2 () = copy r_squared_mod_p })

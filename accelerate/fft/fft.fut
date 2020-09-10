@@ -24,7 +24,8 @@ import "lib/github.com/diku-dk/fft/stockham-radix-2"
 
 module fft = mk_fft f32
 
-let tabmap [n] 'a 'b (f: i32 -> a -> b) (xs: [n]a) = map2 f (iota n) xs
+let tabmap [n] 'a 'b (f: i32 -> a -> b) (xs: [n]a) =
+  map2 f (map i32.i64 (iota n)) xs
 
 let centre_2d [n][m] (arr: [n][m]c32): [n][m]c32 =
   let f (i: i32) (j: i32) (x: c32) =
@@ -35,8 +36,8 @@ let transform [n][m] (cutoff: i32) (arr: [n][m]u8) =
   let arr_complex = map1 (map1 (f32.u8 >-> c32.mk_re)) arr
   let arr_centered = centre_2d arr_complex
   let arr_freq = fft.fft2 arr_centered
-  let centre_i = n / 2
-  let centre_j = m / 2
+  let centre_i = i32.i64 n / 2
+  let centre_j = i32.i64 m / 2
   let zap (i: i32) (j: i32) (x: c32) =
         if i > centre_i - cutoff && i < centre_i + cutoff &&
            j > centre_j - cutoff && j < centre_j + cutoff

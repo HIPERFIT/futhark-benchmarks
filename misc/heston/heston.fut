@@ -37,7 +37,7 @@ type quote = {maturity: date, strike: real, quote: real}
 let distinct_maturities [n] (dates: [n]date): ([]date, [n]i32) =
   let switched (x: date) (i: i32) =
     i == 0 || #[unsafe] !(same_date x dates[i - 1])
-  let switches = map2 switched dates (iota n)
+  let switches = map2 switched dates (map i32.i64 (iota n))
   in ((unzip (filter (.0) (zip switches dates))).1,
       map (\x -> x-1) (scan (+) 0 (map i32.bool switches)))
 
@@ -85,7 +85,8 @@ let run_calibration({today,
          (map2 (\(p,v) w -> real.(w * p / v)) prices_and_vegas weights)
          (map3 (\w (_, v) p -> real.(w * p / v)) weights prices_and_vegas x_prices)
 
-  in real_least_squares.least_squares variables objective max_global np (length quotes)
+in real_least_squares.least_squares variables objective max_global np
+                                    (i32.i64 (length quotes))
 
 let date_of_int(x: i32) =
   let d = x%100

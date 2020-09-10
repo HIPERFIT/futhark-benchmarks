@@ -38,14 +38,15 @@ let mk_octree [n] [m] (L: [n]body) (inners : [m]inner) : []octnode =
                                   (i32.bool (left > 0)) +
                                   (i32.bool (right > 0)))
                          |> scan (+) 0
-  let size = (last prefix_sum) + 1
+  let size = i64.i32 (last prefix_sum) + 1
   let ranges = map (+ 1) (rotate (-1) prefix_sum) with [0] = 1
-  let (is, vs) = map (\x -> (x, 1)) (tail ranges) |> unzip
+  let (is, vs) = map (\x -> (i64.i32 x, 1)) (tail ranges) |> unzip
   let I_rad = reduce_by_index (replicate size 0) (+) 0 is vs
               |> scan (+) (0 : i32)
 
   let octree =
     map2 (\i rp ->
+           let i = i32.i64 i
            -- Always relative to root.
            let radix_parent = inners[rp]
            let edges' = edges[rp]

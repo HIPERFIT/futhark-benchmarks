@@ -46,11 +46,11 @@ module romu_quad : rng_engine with int.t = u64 = {
    let zState = ROTL64(zState,19)
    in ({w=wState, x=xState, y=yState, z=zState}, xp)
 
-  let split_rng (n: i32) {w,x,y,z} =
-    tabulate n (\i -> rand {w=w^u64.i32 i,
-                            x=x^u64.i32 i,
-                            y=y^u64.i32 i,
-                            z=z^u64.i32 i}
+  let split_rng (n: i64) {w,x,y,z} =
+    tabulate n (\i -> rand {w=w^u64.i64 i,
+                            x=x^u64.i64 i,
+                            y=y^u64.i64 i,
+                            z=z^u64.i64 i}
                       |> (.0))
 
   let join_rng (rngs: []rng) =
@@ -85,10 +85,10 @@ module romu_trio : rng_engine with int.t = u64 = {
     let zState = ROTL64(zState,44)
     in ({x=xState, y=yState, z=zState}, xp)
 
-  let split_rng (n: i32) {x,y,z} =
-    tabulate n (\i -> rand {x=x^u64.i32 i,
-                            y=y^u64.i32 i,
-                            z=z^u64.i32 i}
+  let split_rng (n: i64) {x,y,z} =
+    tabulate n (\i -> rand {x=x^u64.i64 i,
+                            y=y^u64.i64 i,
+                            z=z^u64.i64 i}
                       |> (.0))
 
   let join_rng (rngs: []rng) =
@@ -119,9 +119,9 @@ module romu_duo : rng_engine with int.t = u64 = {
    let yState = ROTL64(yp,36) + ROTL64(yp,15) - xp
    in ({x=xState, y=yState}, xp)
 
-  let split_rng (n: i32) {x,y} =
-    tabulate n (\i -> rand {x=x^u64.i32 i,
-                            y=y^u64.i32 i}
+  let split_rng (n: i64) {x,y} =
+    tabulate n (\i -> rand {x=x^u64.i64 i,
+                            y=y^u64.i64 i}
                       |> (.0))
 
   let join_rng (rngs: []rng) =
@@ -152,9 +152,9 @@ module romu_duo_jr : rng_engine with int.t = u64 = {
     let yState = ROTL64(yState,27)
     in ({x=xState, y=yState}, xp)
 
-  let split_rng (n: i32) {x,y} =
-    tabulate n (\i -> rand {x=x^u64.i32 i,
-                            y=y^u64.i32 i}
+  let split_rng (n: i64) {x,y} =
+    tabulate n (\i -> rand {x=x^u64.i64 i,
+                            y=y^u64.i64 i}
                       |> (.0))
 
   let join_rng (rngs: []rng) =
@@ -188,11 +188,11 @@ module romu_quad32 : rng_engine with int.t = u32 = {
     let zState = ROTL32(zState,9)
     in ({w=wState, x=xState, y=yState, z=zState}, xp)
 
-  let split_rng (n: i32) {w,x,y,z} =
-    tabulate n (\i -> rand {w=w^u32.i32 i,
-                            x=x^u32.i32 i,
-                            y=y^u32.i32 i,
-                            z=z^u32.i32 i}
+  let split_rng (n: i64) {w,x,y,z} =
+    tabulate n (\i -> rand {w=w^u32.i64 i,
+                            x=x^u32.i64 i,
+                            y=y^u32.i64 i,
+                            z=z^u32.i64 i}
                       |> (.0))
 
   let join_rng (rngs: []rng) =
@@ -227,10 +227,10 @@ module romu_trio32 : rng_engine with int.t = u32 = {
     let zState = ROTL32(zState,22)
     in ({x=xState, y=yState, z=zState}, xp)
 
-  let split_rng (n: i32) {x,y,z} =
-    tabulate n (\i -> rand {x=x^u32.i32 i,
-                            y=y^u32.i32 i,
-                            z=z^u32.i32 i}
+  let split_rng (n: i64) {x,y,z} =
+    tabulate n (\i -> rand {x=x^u32.i64 i,
+                            y=y^u32.i64 i,
+                            z=z^u32.i64 i}
                       |> (.0))
 
   let join_rng (rngs: []rng) =
@@ -262,8 +262,8 @@ module romu_mono32 : rng_engine with int.t = u16 = {
     let state = ROTL32(state,12)
     in (state, result)
 
-  let split_rng (n: i32) state =
-    tabulate n (\i -> (rand (state ^ u32.i32 i)).0)
+  let split_rng (n: i64) state =
+    tabulate n (\i -> (rand (state ^ u32.i64 i)).0)
 
   let join_rng = reduce (^) 0u32
 

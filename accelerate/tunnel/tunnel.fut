@@ -20,7 +20,7 @@ type v2 = (f32,f32)
 
 -- Fractional part of a number.
 let fract(x: f32): f32 =
-  x - r32(t32(x))
+  x - f32.i32(i32.f32(x))
 
 let clamp(lower: f32, x: f32, upper: f32): f32 =
   if x < lower then lower
@@ -42,7 +42,7 @@ let rand1(p: vec2.vector): f32 =
   in fract(f32.sin(vec2.dot p z) * 833458.57832f32)
 
 let sample(irregular: f32, cell: vec2.vector, cellOffset: vec2.vector, sharpness: f32, i: i32, j: i32): vec2.vector =
-  let samplePos = {x=r32 i, y=r32 j}
+  let samplePos = {x=f32.i32 i, y=f32.i32 j}
   let u = rand2(vec2.(cell + samplePos))
   let centre = {x=u.x * irregular, y=u.y * irregular}
   let centreDist = vec2.norm(vec2.(samplePos - cellOffset + centre))
@@ -51,7 +51,7 @@ let sample(irregular: f32, cell: vec2.vector, cellOffset: vec2.vector, sharpness
   in {x=colour * det, y=det}
 
 let voronoise(xy: vec2.vector, irregular: f32, smoothness: f32): f32 =
-  let cell = {x=r32(t32 xy.x), y=r32(t32 xy.y)}
+  let cell = {x=f32.i32(i32.f32 xy.x), y=f32.i32(i32.f32 xy.y)}
   let cellOffset = {x=fract xy.x, y=fract xy.y}
   let sharpness = 1f32 + 63f32 * ((1f32-smoothness) ** 4f32)
   let samples = loop samples = {x=0.0, y=0.0} for i in -2...2 do
@@ -60,10 +60,10 @@ let voronoise(xy: vec2.vector, irregular: f32, smoothness: f32): f32 =
   in samples.x / samples.y
 
 let mod'(n: f32, d: f32): f32 =
-  n - r32(t32(n/d)) * d
+  n - f32.i32(i32.f32(n/d)) * d
 
 let tunnel(time: f32) (x: i32) (y: i32): argb.colour =
-  let pt2 = {x=1.2 * r32 x, y=1.2 * r32 y}
+  let pt2 = {x=1.2 * f32.i32 x, y=1.2 * f32.i32 y}
   let rInv = 1.0f32 / vec2.norm pt2
   let pt3 = {x=pt2.x * rInv, y=pt2.y * rInv} vec2.-
             {x=rInv + 2.0 * mod'(time, 6000.0), y=0.0}
@@ -71,19 +71,20 @@ let tunnel(time: f32) (x: i32) (y: i32): argb.colour =
   let x = voronoise({x=5.0*pt3.x, y=5.0*pt3.y}, 1.0, 1.0) + 0.240*rInv
   in argb.from_rgba (c1.0 * x) (c1.1 * x) (c1.2 * x) 1.0
 
-entry render (time: f32) (h: i32) (w: i32) = tabulate_2d h w <| \y x -> tunnel time (x-w/2) (y-h/2)
+entry render (time: f32) (h: i64) (w: i64) =
+  tabulate_2d h w (\y x -> tunnel time (i32.i64 (x-w/2)) (i32.i64 (y-h/2)))
 
 entry main (time: f32) (h: i32) (w: i32) =
   -- Hack to avoid returning something gigantic.
-  let frame = render time h w
+  let frame = render time (i64.i32 h) (i64.i32 w)
   let frame_flat = flatten frame
-  in frame_flat[i32.u32 (frame_flat[0] % u32.i32 (length frame_flat))]
+  in frame_flat[i32.u32 (frame_flat[0] % u32.i64 (length frame_flat))]
 
 import "lib/github.com/diku-dk/lys/lys"
 
 module lys : lys with text_content = i32 = {
   type text_content = i32
-  type state = {t: f32, h: i32, w: i32}
+  type state = {t: f32, h: i64, w: i64}
   let init _ h w : state = {t=0, h, w}
   let event (e: event) (s: state) =
     match e
@@ -94,5 +95,5 @@ module lys : lys with text_content = i32 = {
   let render {t, h, w} = render t h w
   let text_format () = "FPS: %d"
   let text_colour _ = argb.white
-  let text_content fps _ = t32 fps
+  let text_content fps _ = i32.f32 fps
 }

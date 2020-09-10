@@ -13,13 +13,13 @@ let main [numRecords]
          (lat: f32) (lng: f32)
          (locations_lat: [numRecords]f32)
          (locations_lng: [numRecords]f32)
-        : ([resultsCount]i32, [resultsCount]f32) =
+        : ([]i32, []f32) =
   let locations = zip locations_lat locations_lng
   let distance (lat_i: f32, lng_i: f32) =
     f32.sqrt((lat-lat_i)*(lat-lat_i) + (lng-lng_i)*(lng-lng_i) )
   let distances = map distance locations
 
-  let results = replicate resultsCount emptyRecord
+  let results = replicate (i64.i32 resultsCount) emptyRecord
   let (results, _) =
     loop ((results, distances)) for i < resultsCount do
       let (minDist, minLoc) =
@@ -31,6 +31,6 @@ let main [numRecords]
                     ) (f32.inf, 0) (zip distances (iota numRecords))
 
       let distances[minLoc] = f32.inf
-      let results[i] = (minLoc, minDist)
+      let results[i] = (i32.i64 minLoc, minDist)
       in (results, distances)
   in unzip results

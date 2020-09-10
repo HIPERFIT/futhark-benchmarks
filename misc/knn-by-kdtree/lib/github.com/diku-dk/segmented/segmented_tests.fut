@@ -34,7 +34,7 @@ entry test_segmented_reduce (flags: []bool) (as: []i32) =
 -- input { [0,0] } output { empty([0]i32) }
 
 entry test_replicated_iota (repl:[]i32) : []i32 =
-  replicated_iota repl
+  map i32.i64 (replicated_iota (map i64.i32 repl))
 
 -- ==
 -- entry: test_segmented_iota
@@ -45,7 +45,7 @@ entry test_replicated_iota (repl:[]i32) : []i32 =
 -- input { empty([0]bool) } output { empty([0]i32) }
 
 entry test_segmented_iota (flags:[]bool) : []i32 =
-  segmented_iota flags
+  map i32.i64 (segmented_iota flags)
 
 -- ==
 -- entry: test_expand
@@ -53,7 +53,7 @@ entry test_segmented_iota (flags:[]bool) : []i32 =
 -- output { [0,2,0,3,6,0] }
 
 entry test_expand (arr:[]i32) : []i32 =
-  expand (\ x -> x) (\x i -> x*i) arr
+  expand (\x -> i64.i32 x) (\x i -> x*i32.i64 i) arr
 
 -- ==
 -- entry: test_expand_reduce
@@ -61,7 +61,7 @@ entry test_expand (arr:[]i32) : []i32 =
 -- output { [2,9,0] }
 
 entry test_expand_reduce (arr:[]i32) : []i32 =
-  expand_reduce (\ x -> x) (\x i -> x*i) (+) 0 arr
+  expand_reduce (\x -> i64.i32 x) (\x i -> x*i32.i64 i) (+) 0 arr
 
 -- ==
 -- entry: test_expand_outer_reduce
@@ -69,4 +69,4 @@ entry test_expand_reduce (arr:[]i32) : []i32 =
 -- output { [2,0,9,0] }
 
 entry test_expand_outer_reduce (arr:[]i32) : []i32 =
-  expand_outer_reduce (\ x -> x) (\x i -> x*i) (+) 0 arr
+  expand_outer_reduce (\x -> i64.i32 x) (\x i -> x*i32.i64 i) (+) 0 arr

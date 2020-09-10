@@ -83,31 +83,31 @@ let md5s [n] (bs: [n][16]u32): [n]md5 =
 let first_true [n] (bools : [n]bool): i32 =
   (reduce_comm (\p (i,x) -> if x then (i,x) else p)
                (-1,false)
-               (zip (iota n) bools)).0
+               (zip (map i32.i64 (iota n)) bools)).0
 
 -- Input preprocessing.
 
 type dict [n] = [n][16]u32
 
-let mk_block (bs: []u8) ((i,k): (i32,i32)): [16]u32 =
+let mk_block (bs: []u8) ((i,k): (i64,i64)): [16]u32 =
   #[unsafe]
-  let k = i32.min 64 k -- Truncate past first block.
+  let k = i64.min 64 k -- Truncate past first block.
   let one_bit = [0x80u8, 0u8, 0u8, 0u8]
   let block = replicate 64 0u8
   let block[0:k] = bs[i:i+k]
   let block[k:k+4] = one_bit
-  let block[64-8:64-4] = bytes (u32.i32(k*8))
+  let block[64-8:64-4] = bytes (u32.i64(k*8))
   in map unbytes (unflatten 16 4 block)
 
-let md5_blocks [n][k] (bs: [k]u8) (offsets: [n]i32): [n][16]u32 =
+let md5_blocks [n][k] (bs: [k]u8) (offsets: [n]i64): [n][16]u32 =
   let lengths = map (\(i, j) -> if i > j then k-i else j-i)
                     (zip offsets (rotate 1 offsets))
   in map (mk_block bs) (zip offsets lengths)
 
-entry mk_dict [n] (bs: []i8) (offsets: [n]i32): dict[n] =
+entry mk_dict [n] (bs: []i8) (offsets: [n]i64): dict[n] =
   md5_blocks (map u8.i8 bs) offsets
 
 -- The entry point.
 
 entry main [n] (a: u32) (b: u32) (c: u32) (d: u32) (bs: []i8) (offsets: [n]i32): i32 =
-  first_true (map (==(a,b,c,d)) (md5s (mk_dict bs offsets)))
+  first_true (map (==(a,b,c,d)) (md5s (mk_dict bs (map i64.i32 offsets))))

@@ -1,4 +1,7 @@
-let array f n m = map (\i -> replicate m (f i)) (iota n)
+let array f n m =
+  let n64 = i64.i32 n
+  let m64 = i64.i32 m
+  in map (\i -> replicate m64 (f i)) (iota n64)
 
 -- ==
 -- entry: sum_iota_i32
@@ -11,7 +14,7 @@ let array f n m = map (\i -> replicate m (f i)) (iota n)
 -- only_c input { 1000000 10 } auto output
 -- only_c input { 10000000 1 } auto output
 
-entry sum_iota_i32 n m = array i32.i32 n m |> map (scan (+) 0)
+entry sum_iota_i32 n m = array i32.i64 n m |> map (scan (+) 0)
 
 -- ==
 -- entry: sum_i32

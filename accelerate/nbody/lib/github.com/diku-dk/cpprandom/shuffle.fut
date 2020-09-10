@@ -27,18 +27,18 @@ module mk_shuffle (E: rng_engine) : shuffle with rng = E.rng = {
     let ps1_clean' = map2 (*) bits ps1_clean
     let ps = map2 (+) ps0_clean ps1_clean'
     let ps_actual = map (\x -> x-1) ps
-    in scatter (copy xs) ps_actual xs
+    in scatter (copy xs) (map i64.i32 ps_actual) xs
 
   let radix_sort [n] 't (num_bits: i32) (get_bit: i32 -> t -> i32)
                         (xs: [n]t): [n]t =
     loop xs for i < num_bits do radix_sort_step xs get_bit i
 
-  module dist = uniform_int_distribution i32 E
+  module dist = uniform_int_distribution i64 E
 
   let shuffle' [n] 't rngs (xs: [n]t) =
     let (rngs', keys) = map (dist.rand (0, n - 1)) rngs |> unzip
-    let get_bit i x = i32.get_bit i keys[x]
-    let num_bits = t32 (f32.log2 (r32 n))
+    let get_bit i x = i64.get_bit i keys[x]
+    let num_bits = i32.f64 (f64.ceil (f64.log2 (f64.i64 n)))
     let xs' = radix_sort num_bits get_bit (iota n) |>
               map (\i -> xs[i])
     in (rngs', xs')

@@ -40,7 +40,7 @@ let core_step [n] [e]
           active_indices: []i32) : (*[n]i32, *[n]bool) =
 
   let costs_now = map (\tid -> #[unsafe] cost[tid]) active_indices
-  let flat_len = e_max * (length active_indices)
+  let flat_len = i64.i32 e_max * length active_indices
 
   let changes = map (\ii ->
                         let row = ii / e_max
@@ -54,11 +54,11 @@ let core_step [n] [e]
                                 let edge_index  = col+start_index
                                 let node_id = #[unsafe] edges_dest[edge_index]
                                 in  if !(#[unsafe] graph_visited[node_id])
-                                    then (node_id, costs_now[row]+1)
+                                    then (i64.i32 node_id, costs_now[row]+1)
                                     -- then (node_id, #[unsafe] cost[tid] + 1)
                                     else (-1, -1)
                             else (-1, -1)
-                    ) (iota flat_len)
+                    ) (map i32.i64 (iota flat_len))
 
   let (changes_node_ids, changes_costs) = unzip(changes)
   let cost' = scatter cost changes_node_ids changes_costs
@@ -86,13 +86,14 @@ let step [n][e]
   let act_num_edges = map (\tid -> #[unsafe] nodes_n_edges[tid]) (iota n)
   let max_num_edges = i32.maximum act_num_edges
   let tot_num_edges = i32.sum     act_num_edges
-  let e_max = 3 * ( tot_num_edges / n + 1)
+  let e_max = 3 * ( tot_num_edges / i32.i64 n + 1)
   let continue' = max_num_edges > e_max
 
+  let active_indices = map i32.i64 active_indices
   let (cost_res, updating_graph_mask_res) =
      if continue'
      then let (do_inds_now, do_inds_later) =
-               partition (\tid -> #[unsafe] nodes_n_edges[tid] <= e_max) active_indices
+              partition (\tid -> #[unsafe] nodes_n_edges[tid] <= e_max) active_indices
           let (cost', updating_graph_mask') =
               core_step ( cost, nodes_start_index, nodes_n_edges, edges_dest,
                           graph_visited, updating_graph_mask, e_max, do_inds_now )

@@ -14,7 +14,9 @@ module vector_8 = cat_vector vector_5 vector_3
 let main (xs: [vector_8.length]i32) =
   xs
   |> vector_8.from_array
+  |> vector_8.map i64.i32
   |> vector_8.map2 (+) vector_8.iota
+  |> vector_8.map i32.i64
   |> vector_8.to_array
 
 -- ==

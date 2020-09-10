@@ -9,11 +9,11 @@ let plus_scan [n] (x: [n]i32): [n]i32 =
   scan (+) 0 x
 
 let plus_prescan [n] (x: [n]i32): [n]i32 =
-  let xshifted = map (\(i: i32): i32  -> if i == 0 then 0 else x[i - 1]) (iota n)
+  let xshifted = map (\i  -> if i == 0 then 0 else x[i - 1]) (iota n)
   in scan (+) 0 xshifted
 
 let permute [n] (a: [n]u32, index: [n]i32): [n]u32 =
-  scatter (copy a) index a
+  scatter (copy a) (map i64.i32 index) a
 
 let plus_scan_reverse_order [n] (x: [n]i32): [n]i32 =
   let xreversed = reverse x
@@ -23,7 +23,7 @@ let plus_scan_reverse_order [n] (x: [n]i32): [n]i32 =
 
 let split_blelloch [n] (a: [n]u32, flags: [n]i32): [n]u32 =
   let i_down = plus_prescan(map (1-) flags)
-  let i_up = map (n-) (plus_scan_reverse_order(flags))
+  let i_up = map (i32.i64 n-) (plus_scan_reverse_order(flags))
   let index = map3 (\flag up down -> if flag == 1 then up else down)
                    flags i_up i_down
   in permute(a, index)

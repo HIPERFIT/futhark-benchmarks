@@ -52,7 +52,7 @@ let step [n][e]
   -- let active_costs  = map (\tid -> #[unsafe] cost[tid]+1           ) active_indices
   -- let e_max = i32.maximum act_num_edges
 
-  let flat_len = e_max * n_indices
+  let flat_len = i64.i32 e_max * n_indices
   let changes = map (\ii -> let row = ii / e_max
                             let col = ii % e_max
                             -- let n_edges     = #[unsafe] act_num_edges[row]
@@ -65,11 +65,11 @@ let step [n][e]
                                      let edge_index  = col+start_index
                                      let node_id = #[unsafe] edges_dest[edge_index]
                                      in  if !(#[unsafe] graph_visited[node_id])
-                                         then (node_id, active_costs[row]+1)
+                                         then (i64.i32 node_id, active_costs[row]+1)
                                          -- then (node_id, #[unsafe] cost[tid] + 1)
                                          else (-1, -1)
                                 else (-1, -1)
-                    ) (iota flat_len)
+                    ) (map i32.i64 (iota flat_len))
 
   let (changes_node_ids, changes_costs) = unzip(changes)
 

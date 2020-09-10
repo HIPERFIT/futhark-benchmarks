@@ -8,8 +8,8 @@ type text_content = (i32, i32)
 module lys: lys with text_content = text_content = {
   type eye = {pos: position, a: f32, b: f32}
 
-  type state = { height: i32
-               , width: i32
+  type state = { height: i64
+               , width: i64
                , fov: i32
                , eye: eye
                , forward_sgn: i32
@@ -49,13 +49,13 @@ module lys: lys with text_content = text_content = {
 
   let move_speed: f32 = 1000
   let forwards td ({pos=_, a,b}: eye) (s: i32) =
-    let amount = move_speed * r32 s * td
+    let amount = move_speed * f32.i32 s * td
     in {x = amount * f32.cos(a) * f32.cos(b),
         y = amount * f32.sin(b),
         z = amount * f32.sin(a) * f32.cos(b)}
 
   let sideways td ({pos=_, a,b=_}: eye) (s: i32) =
-    let amount = move_speed * r32 s * td
+    let amount = move_speed * f32.i32 s * td
     in {x = amount * f32.cos(a + f32.pi/2),
         y = 0 : f32,
         z = amount * f32.sin(a + f32.pi/2)}
@@ -71,8 +71,8 @@ module lys: lys with text_content = text_content = {
                        |> vec3.((+sideways td s.eye s.sideway_sgn))
     case #mouse {buttons, x, y} ->
       if buttons == 0 then
-        s with eye.a = s.eye.a + r32 x/r32 s.width
-          with eye.b = f32.min (f32.max (s.eye.b + r32 y/r32 s.height)
+        s with eye.a = s.eye.a + f32.i32 x/f32.i64 s.width
+          with eye.b = f32.min (f32.max (s.eye.b + f32.i32 y/f32.i64 s.height)
                                         (-f32.pi/2+0.001))
                                (f32.pi/2-0.001)
       else s
@@ -80,7 +80,7 @@ module lys: lys with text_content = text_content = {
 
 
   let render (s: state): [][]argb.colour =
-    trace.main s.width s.height s.fov
+    trace.main (i32.i64 s.width) (i32.i64 s.height) s.fov
                s.eye.pos.x s.eye.pos.y s.eye.pos.z
                s.eye.a s.eye.b
                s.limit s.time
@@ -90,7 +90,7 @@ module lys: lys with text_content = text_content = {
   let text_format () = "FPS: %d; rendering limit: %d"
 
   let text_content (fps: f32) (s: state): text_content =
-    (t32 fps, s.limit)
+    (i32.f32 fps, s.limit)
 
   let text_colour = const argb.yellow
 

@@ -36,17 +36,19 @@ module rnge = linear_congruential_engine i32 {
 module norm_rng = normal_distribution f64 rnge
 
 -- | Fills a radius x radius matrix representing the disk
-let strelDisk (radius: i32): [][]i32 =
+let strelDisk (radius: i64): [][]i32 =
   let diameter = radius*2 - 1
   in tabulate_2d diameter diameter
-     (\x y -> let distance = f64.sqrt(r64 (x-radius+1)**2 + r64 (y-radius+1)**2)
-              in if distance < r64 radius then 1 else 0)
+                 (\x y -> let distance = f64.sqrt(f64.i64 (x-radius+1)**2 +
+                                                  f64.i64 (y-radius+1)**2)
+                          in if distance < f64.i64 radius then 1 else 0)
 
-let getneighbors [diameter] (se: [diameter][diameter]i32) (radius: i32): [](f64,f64) =
+let getneighbors [diameter] (se: [diameter][diameter]i32) (radius: i64): [](f64,f64) =
   let center = radius - 1
   in se
-     |> map2 (\x -> map2 (\y v -> (v != 0, (r64 (y-center),
-                                            r64 (x-center)))) (iota diameter))
+     |> map2 (\x -> map2 (\y v -> (v != 0, (f64.i64 (y-center),
+                                            f64.i64 (x-center))))
+                         (iota diameter))
              (iota diameter)
      |> flatten
      |> filter (.0)
@@ -55,22 +57,22 @@ let getneighbors [diameter] (se: [diameter][diameter]i32) (radius: i32): [](f64,
 -- | Finds the first element in the CDF that is greater than or equal
 -- to the provided value and returns that index
 let findIndex [Nparticles] (CDF: [Nparticles]f64) (value: f64): i32 =
-  i32.min (Nparticles-1)
-          (loop x = 0 while x < Nparticles &&
+  i32.min (i32.i64 Nparticles-1)
+          (loop x = 0 while x < i32.i64 Nparticles &&
                             value < #[unsafe] CDF[x]
            do x + 1)
 
 let particleFilter [IszX][IszY][Nfr]
-                   (I: [IszX][IszY][Nfr]i32) (Nparticles: i32) =
+                   (I: [IszX][IszY][Nfr]i32) (Nparticles: i64) =
   let seed = rnge.rng_from_seed [123] |> rnge.split_rng Nparticles
-  let xe = f64.round (r64 IszY / 2)
-  let ye = f64.round (r64 IszX / 2)
-  let radius = 5i32
+  let xe = f64.round (f64.i64 IszY / 2)
+  let ye = f64.round (f64.i64 IszX / 2)
+  let radius = 5i64
   let diameter = radius * 2 - 1
   let disk = strelDisk radius :> [diameter][diameter]i32
   let objxy = getneighbors disk radius
   let countOnes = length objxy
-  let weights = replicate Nparticles (1 / r64 Nparticles)
+  let weights = replicate Nparticles (1 / f64.i64 Nparticles)
   let arrayX = replicate Nparticles xe
   let arrayY = replicate Nparticles ye
   let seed0 = rnge.join_rng seed
@@ -89,8 +91,8 @@ let particleFilter [IszX][IszY][Nfr]
 
     let flikelihood x' y' =
       let ind = map
-        (\(a,b) -> let indX = t64 (f64.round x' + b)
-                   let indY = t64 (f64.round y' + a)
+        (\(a,b) -> let indX = i64.f64 (f64.round x' + b)
+                   let indY = i64.f64 (f64.round y' + a)
                    --- Weird: if either computed index is out of
                    --- bounds, then we just read element [0,0]
                    --- instead.  The original implementation did the
@@ -100,10 +102,10 @@ let particleFilter [IszX][IszY][Nfr]
         ) objxy
       in (map2 (-) (map (\(i,j) -> (#[unsafe] I[i,j,k]-100)**2) ind)
                    (map (\(i,j) -> (#[unsafe] I[i,j,k]-228)**2) ind))
-         |> map r64
+         |> map f64.i32
          |> map (/50)
          |> f64.sum
-         |> (/r64 countOnes)
+         |> (/f64.i64 countOnes)
 
     let likelihood = map2 flikelihood arrayX arrayY
 
@@ -112,13 +114,13 @@ let particleFilter [IszX][IszY][Nfr]
     let weights = map2 (*) weights (map (/sumWeights) weights)
     let xe = f64.sum (map2 (*) arrayX weights)
     let ye = f64.sum (map2 (*) arrayY weights)
-    let distance = f64.sqrt ((xe-f64.round(r64 IszY/2))**2 + (ye-f64.round(r64 IszX/2))**2)
+    let distance = f64.sqrt ((xe-f64.round(f64.i64 IszY/2))**2 + (ye-f64.round(f64.i64 IszX/2))**2)
     let distances[k] = distance
 
     let CDF = scan (+) 0 weights
     let (seed0, v) = norm_rng.rand {mean=0, stddev=1} seed0
-    let u1 = (1/r64 Nparticles) * v
-    let u = map (r64 >-> (/r64 Nparticles) >-> (+u1)) (iota Nparticles)
+    let u1 = (1/f64.i64 Nparticles) * v
+    let u = map (f64.i64 >-> (/f64.i64 Nparticles) >-> (+u1)) (iota Nparticles)
     let (xj, yj) = u
                    |> map (\u' -> let i = findIndex CDF u'
                                   in #[unsafe] (arrayX[i], arrayY[i]))

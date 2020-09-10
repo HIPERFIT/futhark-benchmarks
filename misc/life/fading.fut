@@ -41,7 +41,7 @@ let uninit ((c,_,_): cell) = V.uninit c
 let colour ((c,col,h): cell) =
   let normal = V.colour c in
   if dead c
-  then argb.mix 1f32 col (r32 h * F.dying_speed) normal
+  then argb.mix 1f32 col (f32.i32 h * F.dying_speed) normal
   else normal
 })
 

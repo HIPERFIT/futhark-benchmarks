@@ -29,8 +29,8 @@ type text_content = (i32, i32, i32, f32)
 module lys : lys with text_content = text_content = {
   type state = { config: config
                , precision: i32
-               , height: i32
-               , width: i32
+               , height: i64
+               , width: i64
                , mouse: (i32, i32) }
 
   let init _ height width : state =
@@ -41,12 +41,12 @@ module lys : lys with text_content = text_content = {
 
   let diff (x1: i32, y1: i32) (x2, y2) = (x2 - x1, y2 - y1)
   let move (s: state) (dx: i32, dy: i32) =
-    let aspect_ratio = r64 s.width / r64 s.height
-    let x_per_pixel = s.config.width / r64 s.width
+    let aspect_ratio = f64.i64 s.width / f64.i64 s.height
+    let x_per_pixel = s.config.width / f64.i64 s.width
     let height = s.config.width*(1/aspect_ratio)
-    let y_per_pixel = height / r64 s.height
-    in s.config with xcentre = s.config.xcentre - x_per_pixel * r64 dx
-                with ycentre = s.config.ycentre - y_per_pixel * r64 dy
+    let y_per_pixel = height / f64.i64 s.height
+    in s.config with xcentre = s.config.xcentre - x_per_pixel * f64.i32 dx
+                with ycentre = s.config.ycentre - y_per_pixel * f64.i32 dy
   let grab_mouse = false
 
   let event (e: event) (s: state) =
@@ -69,12 +69,12 @@ module lys : lys with text_content = text_content = {
     s with mouse = (x,y) with config = if buttons != 0 then move s (diff s.mouse (x,y))
                                        else s.config
     case #wheel {dx=_, dy} ->
-      s with config.width = s.config.width * (1 - 0.01 * r64 dy)
+      s with config.width = s.config.width * (1 - 0.01 * f64.i32 dy)
     case _ -> s
 
   type text_content = text_content
   let text_format () = "FPS: %d; bits: %d; iterations: %d; radius: %.1f"
-  let text_content (fps: f32) (s: state) = (t32 (f32.round fps), s.precision,
+  let text_content (fps: f32) (s: state) = (i32.f32 (f32.round fps), s.precision,
                                             s.config.limit, f32.f64 s.config.radius)
   let text_colour _ = argb.white
 

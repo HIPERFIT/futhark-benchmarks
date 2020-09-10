@@ -6,6 +6,8 @@
 -- output @ data/sahara-cloudy.out.gz
 -- compiled input @ data/peru.in.gz
 
+let iota32 n = (0..1..<i32.i64 n) :> [n]i32
+
 let logplus (x: f32) : f32 =
   if x > (f32.exp 1)
   then f32.log x else 1
@@ -20,35 +22,35 @@ let filterPadWithKeys [n] 't
   let tfs = map (\a -> if p a then 1 else 0) arr
   let isT = scan (+) 0 tfs
   let i   = last isT
-  let inds= map2 (\a iT -> if p a then iT-1 else -1) arr isT
+  let inds= map2 (\a iT -> if p a then i64.i32 iT-1 else -1) arr isT
   let rs  = scatter (replicate n dummy) inds arr
-  let ks  = scatter (replicate n 0) inds (iota n)
+  let ks  = scatter (replicate n 0) inds (iota32 n)
   in  (zip rs ks, i) 
 
 -- | builds the X matrices; first result dimensions of size 2*k+2
-let mkX_with_trend [N] (k2p2: i32) (f: f32) (mappingindices: [N]i32): [k2p2][N]f32 =
-  map (\ i ->
+let mkX_with_trend [N] (k2p2: i64) (f: f32) (mappingindices: [N]i32): [k2p2][N]f32 =
+  map (\i ->
         map (\ind ->
                 if i == 0 then 1f32
-                else if i == 1 then r32 ind
-                else let (i', j') = (r32 (i / 2), r32 ind)
+                else if i == 1 then f32.i32 ind
+                else let (i', j') = (f32.i32 (i / 2), f32.i32 ind)
                      let angle = 2f32 * f32.pi * i' * j' / f 
                      in  if i % 2 == 0 then f32.sin angle 
                                        else f32.cos angle
             ) mappingindices
-      ) (iota k2p2)
+      ) (iota32 k2p2)
 
-let mkX_no_trend [N] (k2p2m1: i32) (f: f32) (mappingindices: [N]i32): [k2p2m1][N]f32 =
+let mkX_no_trend [N] (k2p2m1: i64) (f: f32) (mappingindices: [N]i32): [k2p2m1][N]f32 =
   map (\ i ->
         map (\ind ->
                 if i == 0 then 1f32
                 else let i = i + 1
-		     let (i', j') = (r32 (i / 2), r32 ind)
+		     let (i', j') = (f32.i32 (i / 2), f32.i32 ind)
                      let angle = 2f32 * f32.pi * i' * j' / f 
                      in  if i % 2 == 0 then f32.sin angle 
                                        else f32.cos angle
             ) mappingindices
-      ) (iota k2p2m1)
+      ) (iota32 k2p2m1)
 
 ---------------------------------------------------
 -- Adapted matrix inversion so that it goes well --
@@ -64,7 +66,7 @@ let mkX_no_trend [N] (k2p2m1: i32) (f: f32) (mappingindices: [N]i32): [k2p2m1][N
                                 if k < n-1  -- Ap case
                                 then #[unsafe] ( A[(k+1)*m+j] - A[(k+1)*m+i] * x )
                                 else x      -- irow case
-                   ) (iota nm)
+                   ) (iota32 nm)
       in  scatter A (iota nm) A'
 
   let mat_inv [n] (A: [n][n]f32): [n][n]f32 =
@@ -77,7 +79,7 @@ let mkX_no_trend [N] (k2p2m1: i32) (f: f32) (mappingindices: [N]i32): [k2p2m1][N
                                             then 1.0
                                             else 0.0
                  ) (iota nm)
-    let Ap' = gauss_jordan n m Ap
+    let Ap' = gauss_jordan (i32.i64 n) (i32.i64 m) Ap
     -- Drop the identity matrix at the front!
     in (unflatten n m Ap')[0:n,n:2*n] :> [n][n]f32
 --------------------------------------------------
@@ -110,7 +112,7 @@ entry main [m][N] (trend: i32) (k: i32) (n: i32) (freq: f32)
   ----------------------------------
   -- 1. make interpolation matrix --
   ----------------------------------
-  let k2p2 = 2*k + 2
+  let k2p2 = i64.i32 (2*k + 2)
   let k2p2' = if trend > 0 then k2p2 else k2p2-1
   let X = opaque <|
 	  if trend > 0
@@ -120,13 +122,13 @@ entry main [m][N] (trend: i32) (k: i32) (n: i32) (freq: f32)
 
   -- PERFORMANCE BUG: instead of `let Xt = copy (transpose X)`
   --   we need to write the following ugly thing to force manifestation:
-  let zero = r32 <| (N*N + 2*N + 1) / (N + 1) - N - 1
+  let zero = f32.i64 <| (N*N + 2*N + 1) / (N + 1) - N - 1
   let Xt  = opaque <|
             map (map (+zero)) (copy (transpose X))
 
-  let Xh  =  (X[:,:n])
-  let Xth =  (Xt[:n,:])
-  let Yh  =  (images[:,:n])
+  let Xh  =  (X[:,:i64.i32 n])
+  let Xth =  (Xt[:i64.i32 n,:])
+  let Yh  =  (images[:,:i64.i32 n])
   
   ----------------------------------
   -- 2. mat-mat multiplication    --
@@ -174,10 +176,11 @@ entry main [m][N] (trend: i32) (k: i32) (n: i32) (freq: f32)
     map2 (\yh y_error ->
             let ns    = map (\ye -> if !(f32.isnan ye) then 1 else 0) yh
                         |> reduce (+) 0
-            let sigma = map (\i -> if i < ns then #[unsafe] y_error[i] else 0.0) (iota n)
+            let sigma = map (\i -> if i < ns then #[unsafe] y_error[i] else 0.0)
+                            (iota32 (i64.i32 n))
                         |> map (\ a -> a*a ) |> reduce (+) 0.0
-            let sigma = f32.sqrt ( sigma / (r32 (ns-k2p2)) )
-            let h     = t32 ( (r32 ns) * hfrac )
+            let sigma = f32.sqrt ( sigma / (f32.i32 (ns-i32.i64 k2p2)) )
+            let h     = i32.f32 ( (f32.i32 ns) * hfrac )
             in  (h, ns, sigma)
          ) Yh y_errors
 
@@ -187,39 +190,41 @@ entry main [m][N] (trend: i32) (k: i32) (n: i32) (freq: f32)
   let hmax = reduce_comm (i32.max) 0 hs
   let MO_fsts = zip3 y_errors nss hs |>
     map (\(y_error, ns, h) -> #[unsafe]
-            map (\i -> if i < h then #[unsafe] y_error[i + ns-h+1] else 0.0) (iota hmax)
+            map (\i -> if i < h then #[unsafe] y_error[i + ns-h+1] else 0.0)
+                (iota32 (i64.i32 hmax))
             |> reduce (+) 0.0 
         ) |> opaque
 
-  let Nmn = N-n
+  let Nmn = N-i64.i32 n
   let BOUND = map (\q -> let t   = n+1+q
                          let time = #[unsafe] mappingindices[t-1]
-                         let tmp = logplus ((r32 time) / (r32 mappingindices[N-1]))
+                         let tmp = logplus ((f32.i32 time) / (f32.i32 mappingindices[N-1]))
                          in  lam * (f32.sqrt tmp)
-                  ) (iota Nmn)
+                  ) (iota32 Nmn)
 
   ---------------------------------------------
   -- 8. moving sums computation:             --
   ---------------------------------------------
   let (_MOs, _MOs_NN, _breaks, means) = zip (zip4 Nss nss sigmas hs) (zip3 MO_fsts y_errors val_indss) |>
-    map (\ ( (Ns,ns,sigma, h), (MO_fst,y_error,val_inds) ) ->
+    map (\ ( (Ns,ns : i32,sigma, h), (MO_fst,y_error,val_inds) ) ->
             let MO = map (\j -> if j >= Ns-ns then 0.0
                                 else if j == 0 then MO_fst
                                 else #[unsafe] (-y_error[ns-h+j] + y_error[ns+j])
-                         ) (iota Nmn) |> scan (+) 0.0
+                         ) (iota32 Nmn) |> scan (+) 0.0
 	    
-            let MO' = map (\mo -> mo / (sigma * (f32.sqrt (r32 ns))) ) MO
+            let MO' = map (\mo -> mo / (sigma * (f32.sqrt (f32.i32 ns))) ) MO
 	        let (is_break, fst_break) = 
 		    map3 (\mo b j ->  if j < Ns - ns && !(f32.isnan mo)
 				      then ( (f32.abs mo) > b, j )
 				      else ( false, j )
-		         ) MO' BOUND (iota Nmn)
+		         ) MO' BOUND (iota32 Nmn)
 		        |> reduce_comm (\ (b1,i1) (b2,i2) -> 
                				    if b1 then (b1,i1) 
               			          else if b2 then (b2, i2)
     				              else (b1,i1) 
               	      	     ) (false, -1)
-	        let mean = map2 (\x j -> if j < Ns - ns then x else 0.0 ) MO' (iota Nmn)
+	        let mean = map2 (\x j -> if j < Ns - ns then x else 0.0 )
+                                MO' (iota32 Nmn)
 			    |> reduce (+) 0.0
 
 	        let fst_break' = if !is_break then -1
@@ -227,8 +232,10 @@ entry main [m][N] (trend: i32) (k: i32) (n: i32) (freq: f32)
                                   in  ((adj_break-1) / 2) * 2 + 1  -- Cosmin's validation hack
             let fst_break' = if ns <=5 || Ns-ns <= 5 then -2 else fst_break'
 
-            let val_inds' = map (adjustValInds n ns Ns val_inds) (iota Nmn)
-            let MO'' = scatter (replicate Nmn f32.nan) val_inds' MO'
+            let val_inds' = map (adjustValInds n ns Ns val_inds)
+                                (iota32 Nmn)
+            let MO'' = scatter (replicate Nmn f32.nan)
+                               (map i64.i32 val_inds') MO'
             in (MO'', MO', fst_break', mean)
         ) |> unzip4
 

@@ -79,36 +79,36 @@ module mk_linalg (T: field): linalg with t = T.t = {
   let kronecker' [m][n][p][q] (xss: [m][n]t) (yss: [p][q]t): [m][n][p][q]t =
     map (map (\x -> map (map (T.*x)) yss)) xss
 
-  let flatten_to [n][m] 't (nm: i32) (xs: [n][m]t): [nm]t =
-    flatten xs :> [nm]t
-
   let kronecker [m][n][p][q] (xss: [m][n]t) (yss: [p][q]t): [][]t =
     kronecker' xss yss        -- [m][n][p][q]
     |> map transpose          -- [m][p][n][q]
     |> flatten                -- [m*p][n][q]
     |> map (flatten_to (n*q)) -- [m*p][n*q]
 
+  let indices_from [n] 't (x: i64) (arr: [n]t) =
+    zip arr (map (+x) (iota n))
+
+  let argmax arr =
+    reduce_comm (\(a,i) (b,j) ->
+                   if a T.< b
+                   then (b,j)
+                   else if b T.< a then (a,i)
+                   else if j < i then (b, j)
+                   else (a, i))
+                (T.i32 0, 0)
+                (zip arr (indices arr))
+
   -- Matrix inversion is implemented with Gauss-Jordan.
   let gauss_jordan [m] [n] (A:[m][n]t) =
-    loop A for i < i32.min m n do
+    loop A for i < i64.min m n do
     -- Find nonzero value.
-    let (j,_) = map (\row -> row[i]) A
-                |> map T.abs
-                |> zip (iota m)
-                |> drop i
-                |> reduce_comm (\(i,a) (j,b) ->
-                                  if a T.< b
-                                  then (j,b)
-                                  else if b T.< a then (i,a)
-                                  else if j < i then (j, b)
-                                  else (i, a))
-                               (0, T.i32 0)
+    let j = A[i:,i] |> map T.abs |> argmax |> (.1) |> (+i)
     let f = T.((i32 1-A[i,i]) / A[j,i])
     let irow = map2 (T.fma f) A[j] A[i]
-    in map (\j -> if j == i
-                  then irow
-                  else let f = T.negate A[j,i]
-                       in map2 (T.fma f) irow A[j]) (iota m)
+    in tabulate m (\j ->
+                     let f = T.negate A[j,i]
+                     in map2 (\x y -> if j == i then x else T.fma f x y)
+                             irow A[j])
 
   let inv [n] (A: [n][n]t): [n][n]t =
     -- Pad the matrix with the identity matrix.

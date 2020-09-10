@@ -6,7 +6,7 @@ let sobolDirVcts(): [30]i32 =
     524288,    262144,    131072,    65536,    32768,    16384,    8192,    4096,    2048,    1024, 
     512,       256,       128,       64,       32,       16,       8,       4,       2,       1      ] 
 
-let sobolInd(dirVct:  [30]i32, n: i32 ): i32 =
+let sobolInd(dirVct:  [30]i32, n: i64 ): i32 =
   let n_gray = (n >> 1) ^ n
   let res = 0
   in loop (res) for (i, v) in zip (iota 30) dirVct do
@@ -17,7 +17,7 @@ let sobolInd(dirVct:  [30]i32, n: i32 ): i32 =
 
 -----------------------
 -----------------------
-let main (boxes1d: i32) (par_per_box: i32) (num_neighbors: i32):
+let main (boxes1d: i64) (par_per_box: i64) (num_neighbors: i64):
                         (f32,
                          []i32,
                          []i32,
@@ -45,14 +45,15 @@ let main (boxes1d: i32) (par_per_box: i32) (num_neighbors: i32):
   -- 1. Initialize boxs' data structure --
   ----------------------------------------
   let boxes = 
-    map (\(nh: i32): ( (i32, i32, i32, i32), [num_neighbors](i32,i32,i32,i32), i32 )  ->
+    tabulate number_boxes
+        (\nh  ->
           let k = nh % boxes1d
           let nr= nh / boxes1d
           let j = nr % boxes1d
           let i = nr / boxes1d
-          
+
           -- current home box
-          let box_coef = ( k, j, i, nh )
+          let box_coef = ( i32.i64 k, i32.i64 j, i32.i64 i, i32.i64 nh )
           -- initialize neighbor boxes
           let (box_nngh, cur_nn) = (replicate num_neighbors (0,0,0,0), 0)
           let (box_nngh_cur_nn) = loop (box_nngh, cur_nn) for nn < num_neighbors do
@@ -67,7 +68,7 @@ let main (boxes1d: i32) (par_per_box: i32) (num_neighbors: i32):
                  (!(l==0 && m==0 && n==0)))
               then  let (x, y, z) = (k+n, j+m, i+l)
                     let number = (z * boxes1d * boxes1d) + (y * boxes1d) + x
-                    in ( (x, y, z, number), cur_nn+1)
+                    in ( (i32.i64 x, i32.i64 y, i32.i64 z, i32.i64 number), cur_nn+1)
               else  ( (0, 0, 0, 0     ), cur_nn  )
             in let box_nngh[cur_nn] = cur_elem
                in (box_nngh, next_cur_nn)
@@ -75,7 +76,7 @@ let main (boxes1d: i32) (par_per_box: i32) (num_neighbors: i32):
           let (box_nngh, cur_nn) = box_nngh_cur_nn
           in  ( box_coef, box_nngh, cur_nn )
 
-       ) (iota(number_boxes) )
+       )
 
   let (box_coefs, box_nnghs0, box_num_nghbs) = unzip3 boxes
   let box_nnghs = copy(transpose(box_nnghs0))
@@ -83,17 +84,17 @@ let main (boxes1d: i32) (par_per_box: i32) (num_neighbors: i32):
   ----------------------------------------------
   -- 2. Initialize input distances and charge --
   ----------------------------------------------
-  let rqv = map  (\(i: i32): [par_per_box](f32,(f32,f32,f32,f32))  ->
-                    map (\(j: i32): (f32, (f32,f32,f32,f32))  ->
+  let rqv = map  (\i  ->
+                    map (\j  ->
                            let n = (i*par_per_box + j)*5 + 1
                            let s1= sobolInd(dirVct, n  )
                            let s2= sobolInd(dirVct, n+1)
                            let s3= sobolInd(dirVct, n+2)
                            let s4= sobolInd(dirVct, n+3)
                            let s5= sobolInd(dirVct, n+4)
-                           in (r32(s5%10 + 1) / 10.0, 
-                               ( r32(s1%10 + 1) / 10.0, r32(s2%10 + 1) / 10.0
-                               , r32(s3%10 + 1) / 10.0, r32(s4%10 + 1) / 10.0 )
+                           in (f32.i32(s5%10 + 1) / 10.0, 
+                               ( f32.i32(s1%10 + 1) / 10.0, f32.i32(s2%10 + 1) / 10.0
+                               , f32.i32(s3%10 + 1) / 10.0, f32.i32(s4%10 + 1) / 10.0 )
                               )
                        ) (iota(par_per_box))
                 ) (iota(number_boxes) )

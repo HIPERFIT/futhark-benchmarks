@@ -16,6 +16,6 @@ let main (screenX: i32) (screenY: i32)
          (xcentre: f32) (ycentre: f32) (width: f32)
          (depth: i32) (radius: f32) =
   -- Hack to avoid returning something gigantic.
-  let frame = mandelbrot.render_mandelbrot screenX screenY xcentre ycentre width depth radius
+  let frame = mandelbrot.render_mandelbrot (i64.i32 screenX) (i64.i32 screenY) xcentre ycentre width depth radius
   let frame_flat = flatten frame
-  in frame_flat[i32.u32(frame_flat[0] % u32.i32(length frame_flat))]
+  in frame_flat[i32.u32(frame_flat[0] % u32.i64(length frame_flat))]

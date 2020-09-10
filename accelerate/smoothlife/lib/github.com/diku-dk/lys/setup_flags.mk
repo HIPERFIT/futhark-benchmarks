@@ -35,7 +35,9 @@ else ifeq ($(LYS_BACKEND),cuda)
 DEVICE_LDFLAGS=-lcuda -lnvrtc
 else ifeq ($(LYS_BACKEND),c)
 DEVICE_LDFLAGS=
+else ifeq ($(LYS_BACKEND),multicore)
+DEVICE_LDFLAGS=-lpthread
 else
-$(error Unknown LYS_BACKEND: $(LYS_BACKEND).  Must be 'opencl', 'cuda', or 'c')
+$(error Unknown LYS_BACKEND: $(LYS_BACKEND).  Must be 'opencl', 'cuda', 'multicore', or 'c')
 endif
 LDFLAGS?=$(BASE_LDFLAGS) $(DEVICE_LDFLAGS)

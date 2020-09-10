@@ -9,16 +9,16 @@
 -- compiled input @ LocVolCalib-data/large.in
 -- output @ LocVolCalib-data/large.out
 
-let initGrid (s0: f32) (alpha: f32) (nu: f32) (t: f32) (numX: i32) (numY: i32) (numT: i32)
+let initGrid (s0: f32) (alpha: f32) (nu: f32) (t: f32) (numX: i64) (numY: i64) (numT: i64)
   : (i32, i32, [numX]f32, [numY]f32, [numT]f32) =
   let logAlpha = f32.log alpha
-  let myTimeline = map (\i -> t * r32 i / (r32 numT - 1.0)) (iota numT)
+  let myTimeline = map (\i -> t * f32.i64 i / (f32.i64 numT - 1.0)) (iota numT)
   let (stdX, stdY) = (20.0 * alpha * s0 * f32.sqrt(t),
                       10.0 * nu         * f32.sqrt(t))
-  let (dx, dy) = (stdX / r32 numX, stdY / r32 numY)
-  let (myXindex, myYindex) = (t32(s0 / dx), numY / 2)
-  let myX = map (\i -> r32 i * dx - r32 myXindex * dx + s0) (iota numX)
-  let myY = map (\i -> r32 i * dy - r32 myYindex * dy + logAlpha) (iota numY)
+  let (dx, dy) = (stdX / f32.i64 numX, stdY / f32.i64 numY)
+  let (myXindex, myYindex) = (i32.f32 (s0 / dx), i32.i64 numY / 2)
+  let myX = tabulate numX (\i -> f32.i64 i * dx - f32.i32 myXindex * dx + s0)
+  let myY = tabulate numY (\i -> f32.i64 i * dy - f32.i32 myYindex * dy + logAlpha)
   in (myXindex, myYindex, myX, myY, myTimeline)
 
 -- make the innermost dimension of the result of size 4 instead of 3?
@@ -64,7 +64,7 @@ let tridagPar [n] (a:  [n]f32, b: [n]f32, c: [n]f32, y: [n]f32 ): *[n]f32 =
   --   solved by scan with 2x2 matrix mult operator --
   ----------------------------------------------------
   let b0   = b[0]
-  let mats = map  (\(i: i32): (f32,f32,f32,f32)  ->
+  let mats = map  (\i ->
                      if 0 < i
                      then (b[i], 0.0-a[i]*c[i-1], 1.0, 0.0)
                      else (1.0,  0.0,             0.0, 1.0))
@@ -84,7 +84,7 @@ let tridagPar [n] (a:  [n]f32, b: [n]f32, c: [n]f32, y: [n]f32 ): *[n]f32 =
   --   solved by scan with linear func comp operator  --
   ------------------------------------------------------
   let y0   = y[0]
-  let lfuns= map  (\(i: i32): (f32,f32)  ->
+  let lfuns= map  (\i  ->
                      if 0 < i
                      then (y[i], 0.0-a[i]/b[i-1])
                      else (0.0,  1.0))
@@ -103,7 +103,7 @@ let tridagPar [n] (a:  [n]f32, b: [n]f32, c: [n]f32, y: [n]f32 ): *[n]f32 =
   --             scan with linear func comp operator  --
   ------------------------------------------------------
   let yn   = y[n-1]/b[n-1]
-  let lfuns= map (\(k: i32): (f32,f32)  ->
+  let lfuns= map (\k  ->
                     let i = n-k-1
                     in  if   0 < k
                         then (y[i]/b[i], 0.0-c[i]/b[i])
@@ -177,7 +177,7 @@ let rollback
   let myResultTR = implicitMethod( myDy, myDyy, myMuY, myVarY, y, dtInv )
   in transpose myResultTR
 
-let value(numX: i32, numY: i32, numT: i32, s0: f32, strike: f32, t: f32, alpha: f32, nu: f32, beta: f32): f32 =
+let value(numX: i64, numY: i64, numT: i64, s0: f32, strike: f32, t: f32, alpha: f32, nu: f32, beta: f32): f32 =
   let (myXindex, myYindex, myX, myY, myTimeline) =
     initGrid s0 alpha nu t numX numY numT
   let (myDx, myDxx) = initOperator(myX)
@@ -198,9 +198,9 @@ let value(numX: i32, numY: i32, numT: i32, s0: f32, strike: f32, t: f32, alpha: 
 
 let main (outer_loop_count: i32) (numX: i32) (numY: i32) (numT: i32)
          (s0: f32) (t: f32) (alpha: f32) (nu: f32) (beta: f32): []f32 =
-  let strikes = map (\i -> 0.001*r32 i) (iota outer_loop_count)
+  let strikes = map (\i -> 0.001*f32.i64 i) (iota (i64.i32 outer_loop_count))
   let res =
     #[incremental_flattening(only_inner)]
-    map (\x -> value(numX, numY, numT, s0, x, t, alpha, nu, beta))
+    map (\x -> value(i64.i32 numX, i64.i32 numY, i64.i32 numT, s0, x, t, alpha, nu, beta))
     strikes
   in res

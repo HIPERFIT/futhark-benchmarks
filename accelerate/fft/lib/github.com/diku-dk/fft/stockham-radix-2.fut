@@ -18,31 +18,32 @@ module mk_fft (R: real): {
   let radix:i32 = 2
 
   let fft_iteration [n] (forward: R.t) (ns: i32) (data: [n]complex) (j: i32)
-                  : (i32, complex, i32, complex) =
+                  : (i64, complex, i64, complex) =
     let angle = R.(f64(-2.0) * forward * pi) R.* (R.i32(j % ns)) R./ R.i32(ns * radix)
     let (v0, v1) = (data[j],
-                    data[j+n/radix] complex.* (complex.mk (R.cos angle) (R.sin angle)))
+                    data[j+i32.i64 n/radix] complex.* (complex.mk (R.cos angle) (R.sin angle)))
 
     let (v0, v1) =  (v0 complex.+ v1, v0 complex.- v1)
     let idxD = ((j/ns)*ns*radix) + (j % ns)
-    in (idxD, v0, idxD+ns, v1)
+    in (i64.i32 idxD, v0, i64.i32 (idxD+ns), v1)
 
   let fft' [n] (forward: R.t) (input: [n]complex) (bits: i32) : [n]complex =
+    let bits64 = i64.i32 bits
     let input = copy input
     let output = copy input
-    let ix = iota(n/radix)
-    let NS = map (radix**) (iota bits)
+    let ix = iota(n/i64.i32 radix)
+    let NS = map (radix**) (map i32.i64 (iota bits64))
     let (res,_) =
       loop (input': *[n]complex, output': *[n]complex) = (input, output) for ns in NS do
         let (i0s, v0s, i1s, v1s) =
-          unzip4 (map (fft_iteration forward ns input') ix)
+          unzip4 (map (fft_iteration forward ns input') (map i32.i64 ix))
         in (scatter output'
-                    (i0s ++ i1s :> [n]i32)
+                    (i0s ++ i1s :> [n]i64)
                     (v0s ++ v1s :> [n]complex),
             input')
     in res
 
-  let log2 (n: i32) : i32 =
+  let log2 (n: i64) : i32 =
     let r = 0
     let (r, _) = loop (r,n) while 1 < n do
       let n = n / 2
@@ -50,7 +51,7 @@ module mk_fft (R: real): {
       in (r,n)
     in r
 
-  let is_power_of_2 (x: i32) = (x & (x - 1)) == 0
+  let is_power_of_2 (x: i64) = (x & (x - 1)) == 0
 
   let generic_fft [n] (forward: bool) (data: [n](R.t, R.t)): [n](R.t, R.t) =
     assert (is_power_of_2 n)
@@ -62,7 +63,7 @@ module mk_fft (R: real): {
     generic_fft true data
 
   let ifft [n] (data: [n](R.t, R.t)): [n](R.t, R.t) =
-    let nc = complex.mk_re (R.i32 n)
+    let nc = complex.mk_re (R.i64 n)
     in map (complex./nc) (generic_fft false data)
 
   let fft_re [n] (data: [n]R.t): [n](R.t, R.t) =
@@ -84,7 +85,7 @@ module mk_fft (R: real): {
     generic_fft2 true data
 
   let ifft2 [n][m] (data: [n][m](R.t, R.t)): [n][m](R.t, R.t) =
-    let nc = complex.mk_re (R.i32 (n*m))
+    let nc = complex.mk_re (R.i64 (n*m))
     in map (\r -> map (complex./nc) r) (generic_fft2 false data)
 
   let fft2_re [n][m] (data: [n][m]R.t): [n][m](R.t, R.t) =

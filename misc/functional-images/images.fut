@@ -42,11 +42,11 @@ let mandelbrotImage 'color (n: i32) (colourise: (complex, i32) -> color): img co
   mandelbrotEscapes n >-> colourise
 
 let mandelbrotGreyscale (n: i32): cimage =
-  mandelbrotImage n <| \(_, i) -> let i' = r32 i / r32 n
+  mandelbrotImage n <| \(_, i) -> let i' = f32.i32 i / f32.i32 n
                                   in (i', i', i', 1f32)
 
 let visualise_argb_image (img: argb_image)
-                         (screen_width: i32) (screen_height: i32)
+                         (screen_width: i64) (screen_height: i64)
                          (width: f32) (height: f32)
                          (xcentre: f32) (ycentre: f32) =
   let aspect_ratio = width / height
@@ -57,14 +57,14 @@ let visualise_argb_image (img: argb_image)
                      (ycentre + (1f32/aspect_ratio)*width/2f32))
   let sizex = xmax - xmin
   let sizey = ymax - ymin
-  let p (y,x) = (xmin + (r32 x * sizex) / r32 screen_width,
-                 ymin + (r32 y * sizey) / r32 screen_height)
+  let p (y,x) = (xmin + (f32.i64 x * sizex) / f32.i64 screen_width,
+                 ymin + (f32.i64 y * sizey) / f32.i64 screen_height)
   in tabulate_2d screen_height screen_width (curry (p >-> img))
 
 let visualise_cimage (img: cimage) = visualise_argb_image (cimage_to_argb img)
 
 let juliaGreyscale (p0: point) (n: i32): cimage =
-  juliaEscapes p0 n >-> \(_, i) -> let i' = r32 i / r32 n
+  juliaEscapes p0 n >-> \(_, i) -> let i' = f32.i32 i / f32.i32 n
                                    in (i', i', i', 1f32)
 
 -- | Cubic interpolation.
@@ -91,7 +91,7 @@ let interp (x0:f32, x1:f32)
 
 -- the ultraPalette from Accelerate.
 let mk_palette (points: i32) (ix: i32): argb.colour =
-  let p = r32 ix / r32 points
+  let p = f32.i32 ix / f32.i32 points
 
   let p0 = 0.0
   let p1 = 0.16
@@ -101,7 +101,7 @@ let mk_palette (points: i32) (ix: i32): argb.colour =
   let p5 = 1.0
 
   let rgb8 (r: i32) (g: i32) (b: i32) =
-    argb.from_rgba (r32 r / 255.0) (r32 g / 255.0) (r32 b / 255.0) 0.0
+    argb.from_rgba (f32.i32 r / 255.0) (f32.i32 g / 255.0) (f32.i32 b / 255.0) 0.0
 
   let c0 = rgb8 0   7   100
   let c1 = rgb8 32  107 203
@@ -132,7 +132,7 @@ let escape_to_colour (limit: i32) (points: i32)
   else let smooth = log2 (log2 (complex.mag z))
        let scale = 256.0
        let shift = 1664.0
-       let ix = t32 (f32.sqrt (r32 n + 1.0 - smooth) * scale + shift)
+       let ix = i32.f32 (f32.sqrt (f32.i32 n + 1.0 - smooth) * scale + shift)
        in mk_palette points (ix %% points)
 
 let mandelbrot_greyscale t =
@@ -172,7 +172,7 @@ module lys: lys with text_content = text_content = {
             | #figure_7_15
             | #fancy
 
-  type state = {screen_size: {height:i32, width:i32},
+  type state = {screen_size: {height:i64, width:i64},
                 image_size: {height:f32, width:f32},
                 centre: (f32, f32),
                 userpos: (f32, f32),
@@ -195,8 +195,8 @@ module lys: lys with text_content = text_content = {
     }
 
   let resize h w (s: state) =
-    let h_shrink = r32 s.screen_size.height / r32 h
-    let w_shrink = r32 s.screen_size.width / r32 w
+    let h_shrink = f32.i64 s.screen_size.height / f32.i64 h
+    let w_shrink = f32.i64 s.screen_size.width / f32.i64 w
     in s with screen_size = {height=h, width=w}
          with image_size = {width=s.image_size.width * (1/w_shrink),
                             height=s.image_size.height * (1/h_shrink)}
@@ -221,10 +221,10 @@ module lys: lys with text_content = text_content = {
   let diff (x1: i32, y1: i32) (x2, y2) = (x2 - x1, y2 - y1)
 
   let move_pixels (s: state) (dx, dy): state =
-    let x_per_pixel = s.image_size.width / r32 s.screen_size.width
-    let y_per_pixel = s.image_size.height / r32 s.screen_size.height
-    in s with centre = (s.centre.0 + x_per_pixel * r32 dx,
-                        s.centre.1 + y_per_pixel * r32 dy)
+    let x_per_pixel = s.image_size.width / f32.i64 s.screen_size.width
+    let y_per_pixel = s.image_size.height / f32.i64 s.screen_size.height
+    in s with centre = (s.centre.0 + x_per_pixel * f32.i32 dx,
+                        s.centre.1 + y_per_pixel * f32.i32 dy)
 
   let mouse (buttons: i32) x y (s: state) =
     let dpos = diff (x,y) s.mouse
@@ -233,8 +233,8 @@ module lys: lys with text_content = text_content = {
             then move_pixels s dpos
             else s
     let s = if (buttons & 4) == 4
-            then s with userpos = (r32 x / r32 s.screen_size.width,
-                                   r32 y / r32 s.screen_size.height)
+            then s with userpos = (f32.i32 x / f32.i64 s.screen_size.width,
+                                   f32.i32 y / f32.i64 s.screen_size.height)
             else s
     in s
 
@@ -252,7 +252,7 @@ module lys: lys with text_content = text_content = {
     case #keydown {key} -> keydown key s
     case #keyup {key} -> keyup key s
     case #mouse {buttons, x, y} -> mouse buttons x y s
-    case #wheel {dx=_, dy} -> do_zoom (-(r32 dy)/100) s
+    case #wheel {dx=_, dy} -> do_zoom (-(f32.i32 dy)/100) s
     case _ -> s
 
   let render (s: state): [][]argb.colour =
@@ -274,7 +274,7 @@ module lys: lys with text_content = text_content = {
   let text_format () = "FPS: %d"
 
   let text_content (fps: f32) (_: state): text_content =
-    t32 fps
+    i32.f32 fps
 
   let text_colour = const argb.yellow
 }

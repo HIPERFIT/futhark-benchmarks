@@ -14,17 +14,19 @@ type inner = {delta_node: i32, sfc_code: u32, left:ptr, right:ptr, parent: i32}
 -- | `L` must be sorted.
 let mk_radix_tree [n] (L: [n]u32) : []inner =
 
-  let delta (i, j) = if j >= 0 && j < n
-                     then let Li = L[i]
-                          let Lj = L[j]
-                          -- Handle duplicates by using index as
-                          -- tiebreaker if necessary.
-                          in if Li == Lj
-                             then 32 + u32.clz (u32.i32 i ^ u32.i32 j)
-                             else u32.clz (Li ^ Lj)
-                     else -1
+  let delta (i, j) =
+    if j >= 0 && j < i32.i64 n
+    then let Li = L[i]
+         let Lj = L[j]
+         -- Handle duplicates by using index as
+         -- tiebreaker if necessary.
+         in if Li == Lj
+            then 32 + u32.clz (u32.i32 i ^ u32.i32 j)
+            else u32.clz (Li ^ Lj)
+    else -1
 
-  let node (i: i32) =
+  let node i =
+    let i = i32.i64 i
     -- Determine direction of range.
     let d = i32.sgn (delta(i,i+1) - delta(i,i-1))
 
@@ -68,8 +70,12 @@ let mk_radix_tree [n] (L: [n]u32) : []inner =
   let (inners, parents_a, parents_b) = tabulate (n-1) node |> unzip3
   let k = (n-1)*2
   let parents = scatter (replicate (n-1) (-1))
-                        (map (.0) parents_a ++ map (.0) parents_b :> [k]i32)
-                        (map (.1) parents_a ++ map (.1) parents_b :> [k]i32)
+                        (concat_to k
+                                   (map ((.0) >-> i64.i32) parents_a)
+                                   (map ((.0) >-> i64.i32) parents_b))
+                        (concat_to k
+                                   (map (.1) parents_a)
+                                   (map (.1) parents_b))
 
   in map2 (\{delta_node, sfc_code, left, right} parent ->
     {delta_node, sfc_code, left, right, parent}) inners parents

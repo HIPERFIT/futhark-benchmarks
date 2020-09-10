@@ -38,7 +38,7 @@ let compute_speed_of_sound(density: f32, pressure: f32): f32 =
     f32.sqrt( gamma * pressure / density )
 
 --
-let initialize_variables (nelr: i32) (ff_variable: [5]f32): [5][nelr]f32 = --[#nvar]float ff_variable
+let initialize_variables (nelr: i64) (ff_variable: [5]f32): [5][nelr]f32 = --[#nvar]float ff_variable
     map (\(x: f32): [nelr]f32  -> replicate nelr x) (ff_variable)
 
 --
@@ -277,7 +277,7 @@ let time_step [nel]
               fluxes: [5][nel]f32  ): [5][nel]f32 =
   transpose(
     map3 (\old_variables' fluxes' step_factor: [5]f32  ->
-            let factor = step_factor / r32(rk+1-j)
+            let factor = step_factor / f32.i32(rk+1-j)
             in [ old_variables'[var_density] + factor*fluxes'[var_density]
                , old_variables'[var_momentum+0] + factor*fluxes'[var_momentum+0]
                , old_variables'[var_momentum+1] + factor*fluxes'[var_momentum+1]

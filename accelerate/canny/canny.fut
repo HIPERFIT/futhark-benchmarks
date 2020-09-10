@@ -34,8 +34,8 @@ let luminanceOfRGBA32(p: i32): f32 =
   let b' = 0.11 * f32.i8(b)
   in (r' + g' + b') / 255.0
 
-let clamp(lower: i32, x: i32, upper: i32): i32 =
-  i32.max lower (i32.min upper x)
+let clamp(lower: i64, x: i64, upper: i64): i64 =
+  i64.max lower (i64.min upper x)
 
 let orientUndef: i32 = 0
 let orientPosD: i32 = 64
@@ -51,8 +51,8 @@ let toGreyscale [h][w] (img: [h][w]i32): [h][w]f32 =
   map (\row -> map (255.0*) (map luminanceOfRGBA32 row)) img
 
 let gaussianX [h][w] (img: [h][w]f32): [h][w]f32 =
-  map (\(x: i32): [w]f32  ->
-        map (\(y: i32): f32  ->
+  map (\x ->
+        map (\y ->
               #[unsafe]
               let a = img[clamp(0,x-2,h-1),y] * (1.0 / 16.0)
               let b = img[clamp(0,x-1,h-1),y] * (4.0 / 16.0)
@@ -64,8 +64,8 @@ let gaussianX [h][w] (img: [h][w]f32): [h][w]f32 =
       (iota h)
 
 let gaussianY [h][w] (img: [h][w]f32): [h][w]f32 =
-  map (\(x: i32): [w]f32  ->
-        map (\(y: i32): f32  ->
+  map (\x ->
+        map (\y ->
               #[unsafe]
               let a = img[x,clamp(0,y-2,w-1)] * (1.0 / 16.0)
               let b = img[x,clamp(0,y-1,w-1)] * (4.0 / 16.0)
@@ -77,8 +77,8 @@ let gaussianY [h][w] (img: [h][w]f32): [h][w]f32 =
      (iota h)
 
 let gradiantMagDir [h][w] (low: f32) (img: [h][w]f32): [h][w](f32,i32) =
-  map (\(x: i32): [w](f32,i32)  ->
-        map (\(y: i32): (f32,i32)  ->
+  map (\x ->
+        map (\y ->
               #[unsafe]
               let v0 = img[clamp(0, x-1, h-1), clamp(0, y-1, w-1)]
               let v1 = img[clamp(0, x+0, h-1), clamp(0, y-1, w-1)]
@@ -104,15 +104,15 @@ let gradiantMagDir [h][w] (low: f32) (img: [h][w]f32): [h][w](f32,i32) =
 
               let dir = if f32.abs(dx) <= low && f32.abs(dy) <= low
                         then 0
-                        else i32.min (64 * (1 + t32(norm) % 4)) 255
+                        else i32.min (64 * (1 + i32.f32(norm) % 4)) 255
 
               in (mag, dir))
             (iota w))
       (iota h)
 
 let nonMaximumSuppression [h][w] (low: f32) (high: f32) (magdir: [h][w](f32,i32)): [h][w]f32 =
-  map (\(x: i32): [w]f32  ->
-        map (\(y: i32): f32  ->
+  map (\x ->
+        map (\y ->
               let (mag, dir) = magdir[x,y]
               let offsetx = if dir > orientVert then -1
                             else if dir < orientVert then 1
@@ -140,13 +140,13 @@ let selectStrong [h][w] (img: [h][w]f32): []i32 =
   -- here, so we have to play with the indices.
   let targetIdxAndLen = scan (+) 0 strong
   let (targetIdx, len') = split n targetIdxAndLen
-  let len = len'[0]
+  let len = i64.i32 (len'[0])
   let zeros = replicate len 0
   let (indices', values) =
     unzip(map3 (\i target_i strong_x ->
                  if strong_x == 0
                  then (-1, 0)
-                 else (target_i, i+1))
+                 else (i64.i32 target_i, i32.i64 i+1))
                (iota n) targetIdx (strong[1:] :> [n]i32))
   in scatter zeros indices' values
 

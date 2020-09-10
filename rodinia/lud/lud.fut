@@ -105,9 +105,9 @@ let lud_internal [m][b] (top_per: [m][b][b]f32, lft_per: [m][b][b]f32, mat_slice
            ) (zip (mat_arr) (top_slice) )
      ) (zip (mat_slice) (lft_per) )
 
-let block_size: i32 = 32
+let block_size: i64 = 32
 
-let pad_to [n] 'a (m: i32) (x: a) (arr: [n]a) : [m]a =
+let pad_to [n] 'a (m: i64) (x: a) (arr: [n]a) : [m]a =
   arr ++ replicate (m - n) x :> [m]a
 
 --------------------------------------------
@@ -129,10 +129,10 @@ let main [m] (mat: [m][m]f32): [m][m]f32 =
     ---- the blocks of the lower part            ----
     -------------------------------------------------
     let matb =
-        map  (\ (i_b: i32): [num_blocks][b][b]f32  ->
-                map  (\ (j_b: i32): [b][b]f32  ->
-                        map (\ (i: i32): [b]f32  ->
-                                map  (\ (j: i32): f32  ->
+        map  (\i_b: [num_blocks][b][b]f32  ->
+                map  (\j_b: [b][b]f32  ->
+                        map (\i: [b]f32  ->
+                                map  (\j: f32  ->
                                         #[unsafe] mat[i_b*b+i, j_b*b + j]
                                     ) (iota(b) )
                            ) (iota(b) )
@@ -184,8 +184,8 @@ let main [m] (mat: [m][m]f32): [m][m]f32 =
     let matb[last_step,last_step] = 
             lud_diagonal( matb[last_step, last_step] )
 
-    let ret_padded = map (\(i_ind: i32): [n]f32  ->
-                          map  (\ (j_ind: i32): f32  ->
+    let ret_padded = map (\i_ind  ->
+                          map  (\j_ind  ->
                                 let (ii, jj) = (i_ind/b, j_ind/b)
                                 let ( i,  j) = (i_ind - ii*b, j_ind - jj*b)
                                 in  #[unsafe] matb[ii,jj,i,j]

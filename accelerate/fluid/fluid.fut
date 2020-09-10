@@ -59,7 +59,7 @@ let in_outside_corner
 module type edge_handling_mapper = {
   type info [g]
 
-  val inner: i32 -> i32 -> (g: i32) -> info [g] -> f32
+  val inner: i32 -> i32 -> (g: i64) -> info [g] -> f32
 }
 
 module edge_handling (mapper: edge_handling_mapper) = {
@@ -86,16 +86,16 @@ module edge_handling (mapper: edge_handling_mapper) = {
     else (0, 0, 0.0) -- This is not supposed to happen.
 
   let handle
-    (i: i32) (j: i32) (g: i32) (b: i32)
+    (i: i32) (j: i32) (g: i64) (b: i32)
     (info: mapper.info []): f32 =
-    if inside i j g
+    if inside i j (i32.i64 g)
     then mapper.inner i j g info
     else let base (i': i32) (j': i32): f32 =
-           let (i1, j1, f) = outermost_inner_index i' j' g b
+           let (i1, j1, f) = outermost_inner_index i' j' (i32.i64 g) b
            in f * mapper.inner i1 j1 g info
 
-         in if in_outside_corner i j g
-            then let (i1, j1, i2, j2) = corner_index_neighbors i j g
+         in if in_outside_corner i j (i32.i64 g)
+            then let (i1, j1, i2, j2) = corner_index_neighbors i j (i32.i64 g)
                  in 0.5 * (base i1 j1 + base i2 j2)
             else base i j
 }
@@ -111,7 +111,7 @@ module edge_handling_lin_solve = edge_handling({
   let inner
     (i: i32)
     (j: i32)
-    (g: i32)
+    (g: i64)
     ((s0, s1, a, c): info [g]):
     f32 =
     -- A stencil.
@@ -133,7 +133,7 @@ let lin_solve [g]
   loop s1 = replicate g (replicate g 0.0) for _k < n_solver_steps do
     map (\i ->
          map (\j ->
-              edge_handling_lin_solve.handle i j g b (s0, s1, a, c))
+              edge_handling_lin_solve.handle (i32.i64 i) (i32.i64 j) g b (s0, s1, a, c))
              (0..<g))
         (0..<g)
 
@@ -146,7 +146,7 @@ let diffuse [g]
   (time_step: f32):
   [g][g]f32 =
   let a = (time_step * diffusion_rate_or_viscosity
-           * r32 (g - 2) * r32 (g - 2))
+           * f32.i64 (g - 2) * f32.i64 (g - 2))
   in lin_solve n_solver_steps s b a (1.0 + 4.0 * a)
 
 
@@ -156,25 +156,25 @@ module edge_handling_advect = edge_handling({
   let inner
     (i: i32)
     (j: i32)
-    (g: i32)
+    (g: i64)
     ((s0, u, v, time_step0): info [g]):
     f32 =
-    let x = r32 i - time_step0 * #[unsafe] u[i, j]
-    let y = r32 j - time_step0 * #[unsafe] v[i, j]
+    let x = f32.i32 i - time_step0 * #[unsafe] u[i, j]
+    let y = f32.i32 j - time_step0 * #[unsafe] v[i, j]
 
     let x = if x < 0.5 then 0.5 else x
-    let x = if x > r32 (g - 2) + 0.5 then r32 (g - 2) + 0.5 else x
-    let i0 = t32 x
+    let x = if x > f32.i64 (g - 2) + 0.5 then f32.i64 (g - 2) + 0.5 else x
+    let i0 = i32.f32 x
     let i1 = i0 + 1
 
     let y = if y < 0.5 then 0.5 else y
-    let y = if y > r32 (g - 2) + 0.5 then r32 (g - 2) + 0.5 else y
-    let j0 = t32 y
+    let y = if y > f32.i64 (g - 2) + 0.5 then f32.i64 (g - 2) + 0.5 else y
+    let j0 = i32.f32 y
     let j1 = j0 + 1
 
-    let s1 = x - r32 i0
+    let s1 = x - f32.i32 i0
     let s0' = 1.0 - s1
-    let t1 = y - r32 j0
+    let t1 = y - f32.i32 j0
     let t0 = 1.0 - t1
 
     in #[unsafe] (s0' * (t0 * s0[i0, j0] + t1 * s0[i0, j1])
@@ -189,9 +189,9 @@ let advect [g]
   (time_step: f32):
   *[g][g]f32 =
 
-  let time_step0 = time_step * r32 (g - 2)
+  let time_step0 = time_step * f32.i64 (g - 2)
   in map (\i -> map (\j ->
-                     edge_handling_advect.handle i j g b (s0, u, v, time_step0))
+                     edge_handling_advect.handle (i32.i64 i) (i32.i64 j) g b (s0, u, v, time_step0))
                     (0..<g))
          (0..<g)
 
@@ -202,13 +202,13 @@ module edge_handling_project_top = edge_handling({
   let inner
     (i: i32)
     (j: i32)
-    (g: i32)
+    (g: i64)
     ((u0, v0): info [g]):
     f32 =
     #[unsafe] (-0.5 * (  u0[i + 1, j]
                     - u0[i - 1, j]
                     + v0[i, j + 1]
-                    - v0[i, j - 1]) / r32 g)
+                    - v0[i, j - 1]) / f32.i64 g)
 })
 
 module edge_handling_project_bottom = edge_handling({
@@ -217,10 +217,10 @@ module edge_handling_project_bottom = edge_handling({
   let inner
     (i: i32)
     (j: i32)
-    (g: i32)
+    (g: i64)
     ((p0, s0, i0d, j0d, i1d, j1d): info [g]):
     f32 =
-    #[unsafe] (s0[i, j] - 0.5 * r32 (g - 2)
+    #[unsafe] (s0[i, j] - 0.5 * f32.i64 (g - 2)
             * (p0[i + i0d, j + j0d] - p0[i + i1d, j + j1d]))
 })
 
@@ -232,7 +232,7 @@ let project [g]
 
   let project_top: [g][g]f32 =
     map (\i -> map (\j ->
-                     edge_handling_project_top.handle i j g 0 (u0, v0))
+                     edge_handling_project_top.handle (i32.i64 i) (i32.i64 j) g 0 (u0, v0))
                    (0..<g))
         (0..<g)
 
@@ -246,7 +246,7 @@ let project [g]
     (j1d: i32):
     *[g][g]f32 =
     map (\i -> map (\j ->
-                    edge_handling_project_bottom.handle i j g b
+                    edge_handling_project_bottom.handle (i32.i64 i) (i32.i64 j) g b
                       (p0, s0, i0d, j0d, i1d, j1d))
                    (0..<g))
         (0..<g)
@@ -296,11 +296,11 @@ let step [g]
 
 let draw_densities [g]
   (ds: [g][g]f32)
-  (g_minus_two: i32):
+  (g_minus_two: i64):
   [g_minus_two][g_minus_two][3]i8 =
   let ks = 1..2...g_minus_two
-  in map (\(i: i32): [g_minus_two][3]i8  ->
-            map (\(j: i32): [3]i8  ->
+  in map (\i: [g_minus_two][3]i8  ->
+            map (\j: [3]i8  ->
                    let value = clamp (255.0 * #[unsafe] ds[i, j])
                    in [value, value, value]) ks) ks
 
@@ -312,7 +312,7 @@ let draw_one_frame [g]
   (time_step: f32)
   (diffusion_rate: f32)
   (viscosity: f32)
-  (g_minus_two: i32):
+  (g_minus_two: i64):
   ([g_minus_two][g_minus_two][3]i8,
    [g][g]f32, [g][g]f32, [g][g]f32) =
   let (u1, v1, d1) = step u0 v0 d0 n_solver_steps

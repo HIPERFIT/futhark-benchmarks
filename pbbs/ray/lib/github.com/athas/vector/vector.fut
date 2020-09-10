@@ -63,16 +63,16 @@ module type vector = {
   val vunzip [n] 'a : [n](vector a) -> vector ([n]a)
 
   -- | A vector with increasing elements, starting at 0.
-  val iota : vector i32
+  val iota : vector i64
 
   -- | A vector with filled with a replicated value
   val replicate 'a : a -> vector a
 
   -- | Retrieve the element at some position.
-  val get 'a: i32 -> vector a -> a
+  val get 'a: i64 -> vector a -> a
 
   -- | Set the element at some position.
-  val set 'a: i32 -> a -> vector a -> vector a
+  val set 'a: i64 -> a -> vector a -> vector a
 
   -- | Perform a left-fold over the vector's elements.
   val foldl 'a 'b : (b -> a -> b) -> b -> vector a -> b
@@ -81,7 +81,7 @@ module type vector = {
   val foldr 'a 'b : (a -> b -> b) -> b -> vector a -> b
 
   -- | The length of vectors.
-  val length : i32
+  val length : i64
 
   -- | Convert a vector to an array.
   val to_array 'a: vector a -> [length]a
@@ -102,7 +102,7 @@ module type vector = {
 -- When using this module, you need to instantiate it with another
 -- module that indicates the dimensionality of the vectors you will be
 -- producing.
-module any_vector(P: { val length : i32 }) : vector = {
+module any_vector(P: { val length : i64 }) : vector = {
   let stdreplicate = replicate
 
   let length = P.length
@@ -115,8 +115,8 @@ module any_vector(P: { val length : i32 }) : vector = {
   let vunzip = transpose
   let iota = iota length
   let replicate a = stdreplicate length a
-  let get i a = a[i]
-  let set i v a = copy a with [i] = v
+  let get (i: i64) a = a[i]
+  let set (i: i64) v a = copy a with [i] = v
   let foldl = foldl -- Prelude foldl.
   let foldr = foldr -- Prelude foldr.
   let to_array = id
@@ -136,11 +136,11 @@ module vector_1 : vector = {
   let zip a b = (a, b)
   let vzip = id
   let vunzip = id
-  let iota = 0i32
+  let iota = 0i64
   let replicate a = a
   let get _ a = a
   let set _ x _ = x
-  let length = 1i32
+  let length = 1i64
   let foldl f b x = f b x
   let foldr f b x = f x b
   let to_array a = stdreplicate length a

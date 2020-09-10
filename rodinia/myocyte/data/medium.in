@@ -1,6 +1,6 @@
 13        -- repeat
 0.0001f32 -- eps
-65536     -- workload
+65536i64  -- workload
 3         -- xmax
 
 [

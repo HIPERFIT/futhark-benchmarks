@@ -46,10 +46,10 @@ let inverse_rotation (x_rotation: f32) (y_rotation: f32): rotation =
 import "lib/github.com/athas/matte/colour"
 
 -- FIXME: This rendering is terrible because it is not FoV-aware.
-let render_point (h: i32) (w: i32)
+let render_point (h: i64) (w: i64)
                  {x=x_ul: f32, y=y_ul: f32} {x=x_br: f32, y=y_br: f32}
                  (max_mass: f32) ({x,y,z=_}:position) (m: f32):
-                 (i32, argb.colour) =
+                 (i64, argb.colour) =
   -- Draw nothing if the point is outside the viewport.
   if x < x_ul || x > x_br || y < y_ul || y > y_br then (-1, 0)
   else
@@ -57,8 +57,8 @@ let render_point (h: i32) (w: i32)
   let x' = (x-x_ul) / (x_br-x_ul)
   let y' = (y-y_ul) / (y_br-y_ul)
   -- Convert x',y' to screen coordinate space.
-  let x'' = t32(x' * r32(w))
-  let y'' = t32(y' * r32(h))
+  let x'' = i64.f32(x' * f32.i64(w))
+  let y'' = i64.f32(y' * f32.i64(h))
   let intensity = if m >= max_mass
                   then 255
                   else 128 + u32.f32((m / max_mass) * 128)
@@ -111,7 +111,7 @@ let mk_body_orbit (radius: f32) (rng: rnge.rng) : (rnge.rng, body) =
   let velocity = {x=0, y=position.x/radius*10, z=0}
   in (rng, {position, mass, velocity})
 
-let mk_bodies (mk: (rnge.rng -> (rnge.rng, body))) (rng: rnge.rng) (n: i32)
+let mk_bodies (mk: (rnge.rng -> (rnge.rng, body))) (rng: rnge.rng) (n: i64)
             : (rnge.rng, [n]body) =
   let rngs = rnge.split_rng n rng
   let (rngs, bodies) = unzip (map mk rngs)
@@ -122,8 +122,8 @@ type solver = #bruteforce | #bh
 type info = (f32, i32, i32, f32)
 module lys : lys with text_content = info = {
   type~ state = { bodies: []body
-                , height: i32
-                , width: i32
+                , height: i64
+                , width: i64
                 , ul: {x: f32, y: f32}
                 , br: {x: f32, y: f32}
                 , invert: bool
@@ -143,8 +143,8 @@ module lys : lys with text_content = info = {
   let screen_space_to_world_space x y (s: state) =
     let x_dist = s.br.x - s.ul.x
     let y_dist = s.br.y - s.ul.y
-    let x = s.ul.x + (r32 x / r32 s.width) * x_dist
-    let y = s.ul.y + (r32 y / r32 s.height) * y_dist
+    let x = s.ul.x + (f32.i64 x / f32.i64 s.width) * x_dist
+    let y = s.ul.y + (f32.i64 y / f32.i64 s.height) * y_dist
     in rotate_point (inverse_rotation (-s.rotation.x) (-s.rotation.y)) {x,y,z=0}
 
   let blob x y (s: state) : state =
@@ -166,17 +166,17 @@ module lys : lys with text_content = info = {
       let accels = map (\b -> accel epsilon (pointmass b) pm) bodies
       in map2 (advance_body td) bodies accels
 
-  let init (seed: u32) (height: i32) (width: i32) : state =
+  let init (seed: u32) (height: i64) (width: i64) : state =
     let n = 10000
     let rng = rnge.rng_from_seed [i32.u32 seed]
-    let (rng, bodies) = mk_bodies (mk_body_cloud (f32.min (r32 height) (r32 width))) rng n
+    let (rng, bodies) = mk_bodies (mk_body_cloud (f32.min (f32.i64 height) (f32.i64 width))) rng n
     let max_mass = f32.maximum (map (.mass) bodies)
     in { bodies
        , height, width
-       , ul = {x = r32 width / -2,
-               y = r32 height / -2}
-       , br = {x = r32 width / 2,
-               y = r32 height / 2}
+       , ul = {x = f32.i64 width / -2,
+               y = f32.i64 height / -2}
+       , br = {x = f32.i64 width / 2,
+               y = f32.i64 height / 2}
        , invert = false
        , max_mass
        , rotation = {x=0, y=0}
@@ -235,19 +235,19 @@ module lys : lys with text_content = info = {
 
       else if key == SDLK_s
       then let radius =
-             f32.min (r32 s.height) (r32 s.width) / 2
+             f32.min (f32.i64 s.height) (f32.i64 s.width) / 2
            let (rng, bodies) =
              mk_bodies (mk_body_spiral radius) s.rng (length s.bodies)
            in s with rng = rng with bodies = bodies
 
       else if key == SDLK_o
-      then let radius = f32.min (r32 s.height) (r32 s.width) / 2
+      then let radius = f32.min (f32.i64 s.height) (f32.i64 s.width) / 2
            let (rng, bodies) =
              mk_bodies (mk_body_orbit radius) s.rng (length s.bodies)
            in s with rng = rng with bodies = bodies
 
       else if key == SDLK_r
-      then let radius = f32.min (r32 s.height) (r32 s.width) / 2
+      then let radius = f32.min (f32.i64 s.height) (f32.i64 s.width) / 2
            let (rng, bodies) =
              mk_bodies (mk_body_cloud radius) s.rng (length s.bodies)
            in s with rng = rng with bodies = bodies
@@ -262,9 +262,9 @@ module lys : lys with text_content = info = {
 
     case #mouse {buttons, x, y} ->
       if (buttons & 1) != 0
-      then blob x y s
+      then blob (i64.i32 x) (i64.i32 y) s
       else if (buttons & 4) != 0
-      then s with attractor = #some (screen_space_to_world_space x y s)
+      then s with attractor = #some (screen_space_to_world_space (i64.i32 x) (i64.i32 y) s)
       else s with attractor = #none
 
     case _ -> s
@@ -287,7 +287,7 @@ module lys : lys with text_content = info = {
   type text_content = info
   let text_content (fps: f32) (s: state) : info =
     (fps,
-     length s.bodies,
+     i32.i64 (length s.bodies),
      match s.solver case #bruteforce -> 0
                     case #bh -> 1,
      s.theta)

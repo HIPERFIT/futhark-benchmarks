@@ -20,17 +20,17 @@
 -- compiled input @ data/image.in.gz
 -- output @ data/image.out.gz
 
-let indexN(_rows: i32, i: i32): i32 =
+let indexN(_rows: i64, i: i32): i32 =
   if i == 0 then i else i - 1
 
-let indexS(rows: i32, i: i32): i32 =
-  if i == rows-1 then i else i + 1
+let indexS(rows: i64, i: i32): i32 =
+  if i == i32.i64 rows-1 then i else i + 1
 
-let indexW(_cols: i32, j: i32): i32 =
+let indexW(_cols: i64, j: i32): i32 =
   if j == 0 then j else j - 1
 
-let indexE(cols: i32, j: i32): i32 =
-  if j == cols-1 then j else j + 1
+let indexE(cols: i64, j: i32): i32 =
+  if j == i32.i64 cols-1 then j else j + 1
 
 let do_srad [rows][cols] (niter: i32, lambda: f32, image: [rows][cols]u8): [rows][cols]f32 =
   let r1 = 0
@@ -48,15 +48,17 @@ let do_srad [rows][cols] (niter: i32, lambda: f32, image: [rows][cols]u8): [rows
     let sum = f32.sum (flatten image)
     let sum2 = f32.sum (map (**2.0) (flatten image))
     -- get mean (average) value of element in ROI
-    let meanROI = sum / r32 neROI
+    let meanROI = sum / f32.i64 neROI
     -- gets variance of ROI
-    let varROI = (sum2 / r32 neROI) - meanROI*meanROI
+    let varROI = (sum2 / f32.i64 neROI) - meanROI*meanROI
     -- gets standard deviation of ROI
     let q0sqr = varROI / (meanROI*meanROI)
 
     let (dN, dS, dW, dE, c) =
-      unzip5 (map2 (\i row ->
-                unzip5 (map2 (\j jc ->
+      unzip5 (map2 (\i_64 row ->
+                unzip5 (map2 (\j_64 jc ->
+                        let i = i32.i64 i_64
+                        let j = i32.i64 j_64
                         let dN_k = #[unsafe] image[indexN(rows,i),j] - jc
                         let dS_k = #[unsafe] image[indexS(rows,i),j] - jc
                         let dW_k = #[unsafe] image[i, indexW(cols,j)] - jc
@@ -78,8 +80,10 @@ let do_srad [rows][cols] (niter: i32, lambda: f32, image: [rows][cols]u8): [rows
              (iota rows) image)
 
     let image =
-      map4 (\i image_row c_row (dN_row, dS_row, dW_row, dE_row) ->
-                map4 (\j pixel c_k (dN_k, dS_k, dW_k, dE_k)  ->
+      map4 (\i_64 image_row c_row (dN_row, dS_row, dW_row, dE_row) ->
+                map4 (\j_64 pixel c_k (dN_k, dS_k, dW_k, dE_k)  ->
+                          let i = i32.i64 i_64
+                          let j = i32.i64 j_64
                           let cN = c_k
                           let cS = #[unsafe] c[indexS(rows, i), j]
                           let cW = c_k
@@ -105,5 +109,5 @@ let main [rows][cols] (image: [rows][cols]u8): [rows][cols]f32 =
 
 -- Entry point for interactive demo.  Here we can return an RGBA image.
 entry srad [rows][cols] (niter: i32) (lambda: f32) (image: [rows][cols]u8): [rows][cols]i32 =
-  map (map1 (\p -> (t32(p) << 16) | (t32(p) << 8) | (t32(p))))
+  map (map1 (\p -> (i32.f32 (p) << 16) | (i32.f32 (p) << 8) | (i32.f32 (p))))
       (do_srad(niter, lambda, image))

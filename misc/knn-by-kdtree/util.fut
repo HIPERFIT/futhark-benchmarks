@@ -28,8 +28,9 @@ let gather2D 't [m][d] (arr2D: [m][d]t) (inds: [m]i32) : *[m][d]t =
 
 let scatter2D [m][k][n] 't (arr2D: *[m][k]t) (qinds: [n]i32) (vals2D: [n][k]t) : *[m][k]t =
   let nk = n*k
-  let flat_qinds = map (\i -> let (d,r) = (i / k, i % k)
-                              in qinds[d]*k + r
+  let flat_qinds = map (\i -> let (d,r) = (i32.i64 i / i32.i64 k,
+                                           i32.i64 i % i32.i64 k)
+                              in i64.i32 (qinds[d]*i32.i64 k + r)
                        ) (iota nk)
   let res1D = scatter (flatten arr2D) flat_qinds ((flatten vals2D) :> [nk]t) 
   in  unflatten m k res1D 

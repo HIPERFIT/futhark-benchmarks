@@ -8,7 +8,7 @@ import "lib/github.com/athas/matte/colour"
 
 module mandelbrot(real: real): {
   val render_mandelbrot:
-    (screenX: i32) -> (screenY: i32) ->
+    (screenX: i64) -> (screenY: i64) ->
     (xcentre: real.t) -> (ycentre: real.t) -> (width: real.t) ->
     (limit: i32) -> (radius: real.t) ->
     [screenY][screenX]argb.colour
@@ -17,14 +17,14 @@ type real = real.t
 module complex = mk_complex real
 type complex = complex.complex
 
-let int (x: i32) = real.i32 x
+let int (x: i64) = real.i64 x
 
 let divergence (limit: i32) (radius: real) (c0: complex): (complex,i32) =
   let continue (c, i) = i < limit && complex.mag c real.< radius
   let next (c, i) = (complex.(c0 + c * c), i + 1)
   in iterate_while continue next (c0, 0)
 
-let mandelbrot (screenX: i32) (screenY: i32) (limit: i32) (radius: real)
+let mandelbrot (screenX: i64) (screenY: i64) (limit: i32) (radius: real)
                ((xmin, ymin, xmax, ymax): (real,real,real,real))
     : [screenY][screenX](complex,i32) =
   let sizex = real.(xmax - xmin)
@@ -61,7 +61,7 @@ let interp (x0:f32, x1:f32)
 
 -- the ultraPalette from Accelerate.
 let mk_palette (points: i32) (ix: i32): argb.colour =
-  let p = r32 ix / r32 points
+  let p = f32.i32 ix / f32.i32 points
 
   let p0 = 0.0
   let p1 = 0.16
@@ -71,7 +71,7 @@ let mk_palette (points: i32) (ix: i32): argb.colour =
   let p5 = 1.0
 
   let rgb8 (r: i32) (g: i32) (b: i32) =
-    argb.from_rgba (r32 r / 255.0) (r32 g / 255.0) (r32 b / 255.0) 0.0
+    argb.from_rgba (f32.i32 r / 255.0) (f32.i32 g / 255.0) (f32.i32 b / 255.0) 0.0
 
   let c0 = rgb8 0   7   100
   let c1 = rgb8 32  107 203
@@ -102,10 +102,10 @@ let escape_to_colour (limit: i32) (points: i32)
   else let smooth = log2 (log2 (f32.f64 (real.to_f64 (complex.mag z))))
        let scale = 256.0
        let shift = 1664.0
-       let ix = t32 (f32.sqrt (r32 n + 1.0 - smooth) * scale + shift)
+       let ix = i32.f32 (f32.sqrt (f32.i32 n + 1.0 - smooth) * scale + shift)
        in mk_palette points (ix %% points)
 
-let render_mandelbrot (screenX: i32) (screenY: i32)
+let render_mandelbrot (screenX: i64) (screenY: i64)
                       (xcentre: real) (ycentre: real) (width: real)
                       (limit: i32) (radius: real)
                       : [screenY][screenX]argb.colour =

@@ -20,23 +20,23 @@ import "objects"
 import "intersection"
 import "lights"
 
-let cast_view_rays (sizeX: i32) (sizeY: i32) (fov: i32) (eye_dir: position)
+let cast_view_rays (sizeX: i64) (sizeY: i64) (fov: i32) (eye_dir: position)
                  : [sizeY][sizeX]direction =
   let eye_vector = vec3.(normalise eye_dir)
   let vp_right = vec3.normalise (vec3.cross eye_vector {x=0,y=1,z=0})
   let vp_up = vec3.normalise (vec3.cross vp_right eye_vector)
-  let fov_radians = f32.pi * (r32 fov / 2) / 180
-  let height_width_ratio = r32 sizeY / r32 sizeX
+  let fov_radians = f32.pi * (f32.i32 fov / 2) / 180
+  let height_width_ratio = f32.i64 sizeY / f32.i64 sizeX
   let half_width = f32.tan fov_radians
   let half_height = height_width_ratio * half_width
   let camera_width = half_width * 2
   let camera_height = half_height * 2
-  let pixel_width = camera_width / (r32 sizeX - 1)
-  let pixel_height = camera_height / (r32 sizeY - 1)
+  let pixel_width = camera_width / (f32.i64 sizeX - 1)
+  let pixel_height = camera_height / (f32.i64 sizeY - 1)
 
-  let cast (y: i32) (x: i32) =
-    let xcomp = vec3.scale ((r32 x * pixel_width) - half_width) vp_right
-    let ycomp = vec3.scale ((r32 y * pixel_height) - half_height) vp_up
+  let cast (y: i64) (x: i64) =
+    let xcomp = vec3.scale ((f32.i64 x * pixel_width) - half_width) vp_right
+    let ycomp = vec3.scale ((f32.i64 y * pixel_height) - half_height) vp_up
     in vec3.(normalise (eye_vector + xcomp + ycomp))
   in map (\y -> map (cast y) (iota sizeX)) (reverse (iota sizeY))
 
@@ -141,6 +141,8 @@ let main (sizeX: i32) (sizeY: i32) (fov: i32)
          (eye_pos_X: f32) (eye_pos_Y: f32) (eye_pos_Z: f32)
          (eye_dir_A: f32) (eye_dir_B: f32)
          (limit: i32) (time: f32) =
+  let sizeX = i64.i32 sizeX
+  let sizeY = i64.i32 sizeY
   let lights = {lights=[{position={x= 250.0, y= 350.0, z= 200.0},
                          colour=argb.red}]}
 

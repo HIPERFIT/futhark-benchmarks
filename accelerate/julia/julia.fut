@@ -6,17 +6,17 @@ type c32 = c32.complex
 
 let dot ((x,y): c32) = x*x + y*y
 
-let julia (screenX: i32) (screenY: i32) (next: f32 -> c32 -> c32)
+let julia (screenX: i64) (screenY: i64) (next: f32 -> c32 -> c32)
           (t: f32) (x0: f32) (y0: f32) (width: f32)
           (limit: i32) (radius: f32)
         : [screenY][screenX](c32, i32) =
   let complex_of_pixel x y =
-    let height = r32 screenY / r32 screenX * width
+    let height = f32.i64 screenY / f32.i64 screenX * width
     let xmin   = x0 - width  / 2
     let ymin   = y0 - height / 2
 
-    let re     = xmin + (r32 x * width)  / r32 screenX
-    let im     = ymin + (r32 y * height) / r32 screenY
+    let re     = xmin + (f32.i64 x * width)  / f32.i64 screenX
+    let im     = ymin + (f32.i64 y * height) / f32.i64 screenY
     in c32.mk re im
 
   let pixel y x = let z0 = complex_of_pixel x y
@@ -31,11 +31,11 @@ let escape_to_rgba (limit: i32) (palette: []argb.colour) ((z, n): (c32, i32)): a
        let shift   = 1664
        let mag     = c32.mag z
        let smooth  = f32.log2 (f32.log2 mag)
-       let ix      = t32 (f32.sqrt (r32 n + 1 - smooth) * scale + shift) % length palette
+       let ix      = i64.f32 (f32.sqrt (f32.i32 n + 1 - smooth) * scale + shift) % length palette
     in #[unsafe] palette[ix]
 
 let render (palette: []argb.colour)
-           (screenX: i32) (screenY: i32)
+           (screenX: i64) (screenY: i64)
            (next: f32 -> c32 -> c32) (t: f32)
            (x0: f32) (y0: f32) (width: f32)
            (limit: i32) (radius: f32)
@@ -76,7 +76,7 @@ let ultra (p: f32) =
   let p5 = 1.0
 
   let rgb8 (r: i32) (g: i32) (b: i32) =
-    argb.from_rgba (r32 r / 255.0) (r32 g / 255.0) (r32 b / 255.0) 0.0
+    argb.from_rgba (f32.i32 r / 255.0) (f32.i32 g / 255.0) (f32.i32 b / 255.0) 0.0
 
   let c0 = rgb8 0   7   100
   let c1 = rgb8 32  107 203
@@ -100,8 +100,8 @@ let ultra (p: f32) =
                   interp (p4,p5) (c4,c5) (m4,m5) p
 
 
-let ultra_palette (points: i32) : [points]argb.colour =
-  tabulate points (\ix -> ultra (r32 ix / r32 points))
+let ultra_palette (points: i64) : [points]argb.colour =
+  tabulate points (\ix -> ultra (f32.i64 ix / f32.i64 points))
 
 let golden = (1 + f32.sqrt 5) / 2
 
@@ -130,8 +130,8 @@ let presets : []preset =
 
 module lys : lys with text_content = () = {
   type state =
-    { screenX: i32
-    , screenY: i32
+    { screenX: i64
+    , screenY: i64
     , palette: [2048]argb.colour
     , time: f32
     , speed: f32
@@ -181,8 +181,8 @@ module lys : lys with text_content = () = {
         load_preset s presets[key-SDLK_1]
       else if key == SDLK_z then s with radius = s.radius * 0.5
       else if key == SDLK_c then s with radius = s.radius * 2
-      else if key == SDLK_a then s with iters = t32 (r32 s.iters * 0.8)
-      else if key == SDLK_d then s with iters = t32 (r32 s.iters * 1.2)
+      else if key == SDLK_a then s with iters = i32.f32 (f32.i32 s.iters * 0.8)
+      else if key == SDLK_d then s with iters = i32.f32 (f32.i32 s.iters * 1.2)
       else if key == SDLK_q then s with speed = s.speed * 0.75
       else if key == SDLK_e then s with speed = s.speed * 1.25
 
@@ -200,12 +200,12 @@ module lys : lys with text_content = () = {
       else s
 
     case #mouse {buttons, x, y} ->
-      let dx = (s.panning.0-r32 x) * s.width / r32 s.screenX
-      let dy = (s.panning.1-r32 y) * s.width / r32 s.screenY
+      let dx = (s.panning.0-f32.i32 x) * s.width / f32.i64 s.screenX
+      let dy = (s.panning.1-f32.i32 y) * s.width / f32.i64 s.screenY
       let (x', y') = if buttons != 0
                      then (dx + s.posX, dy + s.posY)
                      else (s.posX, s.posY)
-      in s with panning = (r32 x, r32 y)
+      in s with panning = (f32.i32 x, f32.i32 y)
            with posX = x'
            with posY = y'
 

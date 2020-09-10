@@ -20,7 +20,7 @@ let sobolDirVcts(): [30]i32 =
       524288,    262144,    131072,    65536,    32768,    16384,    8192,    4096,    2048,    1024, 
       512,       256,       128,       64,       32,       16,       8,       4,       2,       1      ] 
 
-let sobolInd(dirVct:  [30]i32, n: i32 ): i32 =
+let sobolInd(dirVct:  [30]i32, n: i64 ): i32 =
     let n_gray = (n >> 1) ^ n
     let res = 0
     in loop (res) for (i, v) in zip (iota 30) dirVct do
@@ -29,15 +29,15 @@ let sobolInd(dirVct:  [30]i32, n: i32 ): i32 =
            then res ^ v
            else res
 
-let main (cols: i32) (rows: i32): [cols]i32 =
+let main (cols: i64) (rows: i64): [cols]i32 =
     let dirVct = sobolDirVcts()
     -----------------------
     -- 1. Initialization --
     -----------------------
     let wall_flat = 
-        map (\(i: i32): i32  -> 
+        map (\i ->
                 sobolInd(dirVct, i+1) % 10
-           ) (iota(rows*cols) )
+           ) (iota(rows*cols))
 
     let wall   = unflatten rows cols wall_flat
     let result = copy(wall[0])

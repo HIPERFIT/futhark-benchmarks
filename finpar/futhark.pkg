@@ -1,3 +1,3 @@
 require {
-  github.com/diku-dk/date 1.0.2 #37fb7f56b190e8e3d5efb81db4f2862b65665c33
+  github.com/diku-dk/date 1.0.3 #a435216aec5938d3068c1c18d97d8aaa7a1c310a
 }

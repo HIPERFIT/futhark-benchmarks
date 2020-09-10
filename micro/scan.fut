@@ -22,10 +22,10 @@
 -- only_c input { 10000000 }
 -- only_c input { 100000000 }
 
-entry sum_iota_i8  n = n |> iota |> map i8.i32 |> scan (+) 0
-entry sum_iota_i32 n = n |> iota |> scan (+) 0
-entry sum_iota_f32 n = n |> iota |> map r32 |> scan (+) 0
-entry sum_iota_f64 n = n |> iota |> map r64 |> scan (+) 0
+entry sum_iota_i8  n = i64.i32 n |> iota |> map i8.i64 |> scan (+) 0
+entry sum_iota_i32 n = i64.i32 n |> iota |> map i32.i64 |> scan (+) 0
+entry sum_iota_f32 n = i64.i32 n |> iota |> map f32.i64 |> scan (+) 0
+entry sum_iota_f64 n = i64.i32 n |> iota |> map f64.i64 |> scan (+) 0
 
 -- ==
 -- entry: sum_i8 sum_i32
@@ -111,22 +111,22 @@ let mat4 x = (x, x, x, x)
 let mat4' f a b c d = (f a, f b, f c, f d)
 
 entry prod_iota_mat4_i8  n =
- n |> iota |> map (i8.i32 >-> mat4) |> scan (mat4_mul  (i8.+)  (i8.*)) (1, 0, 0, 1) |> map (.0)
+ i64.i32 n |> iota |> map (i8.i64 >-> mat4)  |> scan (mat4_mul  (i8.+)  (i8.*)) (1, 0, 0, 1) |> map (.0)
 entry prod_iota_mat4_i32 n =
- n |> iota |> map mat4              |> scan (mat4_mul (i32.+) (i32.*)) (1, 0, 0, 1) |> map (.0)
+ i64.i32 n |> iota |> map (i32.i64 >-> mat4) |> scan (mat4_mul (i32.+) (i32.*)) (1, 0, 0, 1) |> map (.0)
 entry prod_iota_mat4_f32 n =
- n |> iota |> map (r32 >-> mat4)    |> scan (mat4_mul (f32.+) (f32.*)) (1, 0, 0, 1) |> map (.0)
+ i64.i32 n |> iota |> map (f32.i64 >-> mat4) |> scan (mat4_mul (f32.+) (f32.*)) (1, 0, 0, 1) |> map (.0)
 entry prod_iota_mat4_f64 n =
- n |> iota |> map (r64 >-> mat4)    |> scan (mat4_mul (f64.+) (f64.*)) (1, 0, 0, 1) |> map (.0)
+ i64.i32 n |> iota |> map (f64.i64 >-> mat4) |> scan (mat4_mul (f64.+) (f64.*)) (1, 0, 0, 1) |> map (.0)
 
 entry prod_mat4_i8 as bs cs ds  =
  map4 (mat4' i8.i32) as bs cs ds |> scan (mat4_mul  (i8.+)  (i8.*)) (1, 0, 0, 1) >-> map (.0)
 entry prod_mat4_i32 as bs cs ds =
- map4 (mat4'     id) as bs cs ds |> scan (mat4_mul (i32.+) (i32.*)) (1, 0, 0, 1) >-> map (.0)
+ map4 (mat4' i32.i32) as bs cs ds |> scan (mat4_mul (i32.+) (i32.*)) (1, 0, 0, 1) >-> map (.0)
 entry prod_mat4_f32 as bs cs ds =
- map4 (mat4'    r32) as bs cs ds |> scan (mat4_mul (f32.+) (f32.*)) (1, 0, 0, 1) >-> map (.0)
+ map4 (mat4' f32.i32) as bs cs ds |> scan (mat4_mul (f32.+) (f32.*)) (1, 0, 0, 1) >-> map (.0)
 entry prod_mat4_f64 as bs cs ds =
- map4 (mat4'    r64) as bs cs ds |> scan (mat4_mul (f64.+) (f64.*)) (1, 0, 0, 1) >-> map (.0)
+ map4 (mat4' f64.i32) as bs cs ds |> scan (mat4_mul (f64.+) (f64.*)) (1, 0, 0, 1) >-> map (.0)
 
 -- Try a non-commutative reduction with a beefy operator containing lots of control flow.
 
@@ -157,10 +157,10 @@ let lss 't (t: t) (pred1: t -> bool) (pred2: t -> t -> bool) (xs: []t) =
 -- input { 1000000 } auto output
 -- only_c input { 10000000 } auto output
 
-entry lss_iota_i8  n = n |> iota |> map  i8.i32 |> lss 0 (const true) (<=)
-entry lss_iota_i32 n = n |> iota |> map i32.i32 |> lss 0 (const true) (<=)
-entry lss_iota_f32 n = n |> iota |> map     r32 |> lss 0 (const true) (<=)
-entry lss_iota_f64 n = n |> iota |> map     r64 |> lss 0 (const true) (<=)
+entry lss_iota_i8  n = i64.i32 n |> iota |> map  i8.i64 |> lss 0 (const true) (<=)
+entry lss_iota_i32 n = i64.i32 n |> iota |> map i32.i64 |> lss 0 (const true) (<=)
+entry lss_iota_f32 n = i64.i32 n |> iota |> map f32.i64 |> lss 0 (const true) (<=)
+entry lss_iota_f64 n = i64.i32 n |> iota |> map f64.i64 |> lss 0 (const true) (<=)
 
 -- ==
 -- entry: lss_i8 lss_i32 lss_f32 lss_f64
@@ -170,5 +170,5 @@ entry lss_iota_f64 n = n |> iota |> map     r64 |> lss 0 (const true) (<=)
 
 entry lss_i8  = map  i8.i32 >-> lss 0 (const true) (<=)
 entry lss_i32 = map i32.i32 >-> lss 0 (const true) (<=)
-entry lss_f32 = map     r32 >-> lss 0 (const true) (<=)
-entry lss_f64 = map     r64 >-> lss 0 (const true) (<=)
+entry lss_f32 = map f32.i32 >-> lss 0 (const true) (<=)
+entry lss_f64 = map f64.i32 >-> lss 0 (const true) (<=)

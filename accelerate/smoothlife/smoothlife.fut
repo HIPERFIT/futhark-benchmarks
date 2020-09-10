@@ -89,44 +89,45 @@ let make_conf (timestep: f32)
   , mix_type = to_sigmoid mix_type
   }
 
-let generate_world (size: i32) (disc: (f32, f32)) (seed: i32): [size][size]f32 =
+let generate_world (size: i64) (disc: (f32, f32)) (seed: i32): [size][size]f32 =
   let (rmin, rmax) = disc
-  let num_circles = size * size / t32 (rmax * rmax)
+  let num_circles = size * size / i64.f32 (rmax * rmax)
 
   let mk_circle rng z =
     let (rng, cell) = uniform_i32.rand (0, 1) rng
     let (rng, radius) = uniform_f32.rand (rmin, rmax) rng
-    let (rng, x) = uniform_i32.rand (0, size - 1) rng
-    let (rng, y) = uniform_i32.rand (0, size - 1) rng
+    let (rng, x) = uniform_i32.rand (0, i32.i64 size - 1) rng
+    let (rng, y) = uniform_i32.rand (0, i32.i64 size - 1) rng
     in (rng, (z, cell, radius, x, y))
 
-  let lines_in_circle (_, _, r, _, _) = f32.round (2 * r) |> t32
-  let get_line_in_circle (z, cell, r, x, y) (i: i32) =
-    let a = r - (r32 i)
+  let lines_in_circle (_, _, r, _, _) = f32.round (2 * r) |> i64.f32
+  let get_line_in_circle (z, cell, r, x, y) (i: i64) =
+    let a = r - f32.i64 i
     let l = a * a - r * r |> f32.abs |> f32.sqrt
-    let p1 = (t32 (f32.round ((r32 x) - l)), y + (f32.round a |> t32))
-    let p2 = (t32 (f32.round ((r32 x) + l)), y + (f32.round a |> t32))
+    let p1 = (i32.f32 (f32.round ((f32.i32 x) - l)), y + (f32.round a |> i32.f32))
+    let p2 = (i32.f32 (f32.round ((f32.i32 x) + l)), y + (f32.round a |> i32.f32))
     in (z, cell, p1.0, p1.1, p2.0, p2.1)
 
-  let points_in_line (_, _, x1, y1, x2, y2) =
-    i32.(1 + max (abs (x2 - x1)) (abs (y2 - y1)))
-  let get_point_in_line (z, cell, x1, y1, x2, y2) (i: i32) =
+  let points_in_line (_, _, x1, y1, x2, y2) : i64 =
+    i64.i32 (i32.(1 + max (abs (x2 - x1)) (abs (y2 - y1))))
+  let get_point_in_line (z, cell, x1, y1, x2, y2) (i: i64) =
+    let i = i32.i64 i
     let compare (v1) (v2) =
       if v2 > v1 then 1 else if v1 > v2 then -1 else 0
     let slope ((x1, y1)) ((x2, y2)) =
       if x2==x1
-      then if y2>y1 then r32(1) else r32(-1)
-      else r32(y2-y1) / r32(i32.abs(x2-x1))
+      then if y2>y1 then 1 else -1
+      else f32.i32(y2-y1) / f32.i32(i32.abs(x2-x1))
     let p1 = (x1, y1)
     let p2 = (x2, y2) in
     if i32.abs (p1.0 - p2.0) > i32.abs (p1.1 - p2.1)
     then let dir = compare (p1.0) (p2.0)
          let sl = slope p1 p2
-         let p = (p1.0 + dir * i, p1.1 + i32.f32 (f32.round (sl * r32 i)))
+         let p = (p1.0 + dir * i, p1.1 + i32.f32 (f32.round (sl * f32.i32 i)))
          in (z, cell, p.0, p.1)
     else let dir = compare (p1.1) (p2.1)
          let sl = slope (p1.1, p1.0) (p2.1, p2.0)
-         let p = (p1.0 + i32.f32 (f32.round (sl * r32 i)), p1.1 + i * dir)
+         let p = (p1.0 + i32.f32 (f32.round (sl * f32.i32 i)), p1.1 + i * dir)
          in (z, cell, p.0, p.1)
 
   let rngs = rng_engine.rng_from_seed [seed] |>
@@ -136,15 +137,15 @@ let generate_world (size: i32) (disc: (f32, f32)) (seed: i32): [size][size]f32 =
   let points = expand points_in_line get_point_in_line lines
 
   let (points, idxs) =
-    map (\(z, cell, x, y) -> ((z, cell), size * y + x)) points |> unzip
+    map (\(z, cell, x, y) -> ((z, cell), size * i64.i32 y + i64.i32 x)) points |> unzip
   let op p1 p2 = if p1.0 >= p2.0 then p1 else p2
   let ne = (-1, 0)
   let initial_bins = map (const ne) (iota (size * size))
   let reduced = reduce_by_index initial_bins op ne idxs points
-  let grid = map ((.1) >-> r32) reduced
+  let grid = map ((.1) >-> f32.i32) reduced
   in unflatten size size grid
 
-let init (size: i32) (conf: conf) (seed: u32): state [size] =
+let init (size: i64) (conf: conf) (seed: u32): state [size] =
 
   let shift2d 'a [r][c] (arr: [r][c]a): [r][c]a =
     let (mr, mc) = (r / 2, c / 2)
@@ -170,17 +171,17 @@ let init (size: i32) (conf: conf) (seed: u32): state [size] =
   let radius ((y', x'): (i32, i32)) (size: i32): f32 =
     let x = x' - (size / 2)
     let y = y' - (size / 2)
-    in f32.sqrt <| r32 (x * x + y * y)
+    in f32.sqrt <| f32.i32 (x * x + y * y)
 
   let kr = map (\y ->
              map (\x ->
-               let r = radius (y, x) size
+               let r = radius (i32.i64 y, i32.i64 x) (i32.i64 size)
                in linear r ri b * (1 - linear r ra b)
              ) (iota size)
            ) (iota size)
   let kd = map (\y ->
              map (\x ->
-               1 - linear (radius (y, x) size) ri b
+               1 - linear (radius (i32.i64 y, i32.i64 x) (i32.i64 size)) ri b
              ) (iota size)
            ) (iota size)
   let krf = fft.fft2_re (shift2d kr)
@@ -270,7 +271,7 @@ let render [size] (state: state [size]): [size][size]argb.colour =
 type text_content = (i32, i32, i32)
 
 -- Due to FFT limitations we always the size up to a power of 2.
-let to_pow2 x = t32 (2 ** f32.ceil (f32.log2 (r32 x)))
+let to_pow2 x = i64.f32 (2 ** f32.ceil (f32.log2 (f32.i64 x)))
 
 -- Because we will shadow 'state' in a moment.
 type sized_state [n] = state [n]
@@ -280,23 +281,24 @@ type sized_state [n] = state [n]
 -- configuration atm
 import "lib/github.com/diku-dk/lys/lys"
 module lys: lys with text_content = text_content = {
-  type~ state = {state: state [], h: i32, w: i32}
+  type~ state = {state: state [], h: i64, w: i64}
 
-  let init (seed: u32) (h: i32) (w: i32): state =
-    let size = to_pow2 (i32.max h w)
+  let init (seed: u32) (h: i64) (w: i64): state =
+    let size = to_pow2 (i64.max h w)
     let conf = make_conf_simple 0.1
     in {state=init size conf seed, h, w}
 
   -- Cut it down to requested size.
   let render (s: state) =
-    let size = to_pow2 (i32.max s.h s.w)
+    let size = to_pow2 (i64.max s.h s.w)
     let screen = render (s.state :> sized_state [size])
     in map (take s.w) screen |> take s.h
 
   -- Resizes can occur even with the -R flag to lys (at least on my machine,
   -- with XMonad). World must be reinit'd on resize, since lys assumes world
   -- and window dimensions are equal
-  let resize (h: i32) (w: i32) (s: state): state = init s.state.seed h w
+  let resize (h: i64) (w: i64) (s: state): state =
+    init s.state.seed h w
 
   let grab_mouse = false
 
@@ -307,14 +309,16 @@ module lys: lys with text_content = text_content = {
       then init s.state.seed (length s.state.world) (length s.state.world[0])
       else s
     case #step _ ->
-      let size = to_pow2 (i32.max s.h s.w)
+      let size = to_pow2 (i64.max s.h s.w)
       in s with state = step (s.state :> sized_state [size])
     case _ -> s
 
   type text_content = text_content
   let text_format () = "FPS: %d\nWorld: %d by %d"
   let text_content (fps: f32) (s: state): text_content =
-    (t32 fps, length s.state.world, length s.state.world[0])
+    (i32.f32 fps,
+     i32.i64 (length s.state.world),
+     i32.i64 (length s.state.world[0]))
   let text_colour = const argb.yellow
 }
 
@@ -326,4 +330,5 @@ module lys: lys with text_content = text_content = {
 -- compiled input { 512 }
 -- compiled input { 1024 }
 let main (w: i32) =
+  let w = i64.i32 w in
   make_conf_simple 0.1 |> (\conf -> init w conf 123) |> iterate 100 step |> (.world)

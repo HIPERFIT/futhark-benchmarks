@@ -31,7 +31,7 @@ import "lib/github.com/diku-dk/segmented/segmented"
 let calculate_dangling_ranks [n] (ranks: [n]f32) (sizes: [n]i32): *[]f32 =
   let zipped = zip sizes ranks
   let weights = map (\(size, rank) -> if size == 0 then rank else 0f32) zipped
-  let total = f32.sum weights / f32.i32 n
+  let total = f32.sum weights / f32.i64 n
   in map (+total) ranks
 
 -- Calculate ranks from all pages
@@ -46,7 +46,7 @@ let calculate_page_ranks [n] (links: []link) (ranks: *[n]f32) (sizes: [n]i32): *
   let page_flags = map2 (!=) tos (rotate (-1) tos)
   let scanned_contributions = segmented_scan (+) 0f32 page_flags contributions
   let (page_tos, page_contributions) =
-    unzip (map3 (\to c flag -> if flag then (to, c) else (-1, c))
+    unzip (map3 (\to c flag -> if flag then (i64.i32 to, c) else (-1, c))
                 tos scanned_contributions (rotate 1 page_flags))
   in scatter (replicate n 0f32) page_tos page_contributions
 
@@ -63,23 +63,23 @@ let sort_by_to = radix_sort i32.num_bits (\i (link: link) -> i32.get_bit i link.
 let sort_by_from = radix_sort i32.num_bits (\i (link: link) -> i32.get_bit i link.from)
 
 -- Compute the number of outbound links for each page.
-let compute_sizes [m] (n: i32) (links: [m]link) =
+let compute_sizes [m] (n: i64) (links: [m]link) =
   let links = sort_by_from links
   let froms = map (\(x: link) -> x.from) links
   let flags = map2 (!=) froms (rotate (-1) froms)
   let sizes = segmented_scan (+) 0 flags (replicate m 1i32)
   let (sizes, ids, _) = unzip3 (filter (.2) (zip3 sizes froms (rotate 1 flags)))
-  in scatter (replicate n 0) ids sizes
+  in scatter (replicate n 0) (map i64.i32 ids) sizes
 
 entry preprocess_graph [m] (links_array: [m][2]i32): ([m]i32, [m]i32, []i32) =
   let links_by_to = sort_by_to (map (\l -> {from=l[0], to=l[1]}) links_array)
   let n = i32.maximum (map (\(x: link) -> 1 + x.from) links_by_to)
   in (map (\(x: link) -> x.from) links_by_to,
       map (\(x: link) -> x.to) links_by_to,
-      compute_sizes n links_by_to)
+      compute_sizes (i64.i32 n) links_by_to)
 
-let initial_ranks (n: i32): *[n]f32 =
-  replicate n (1f32 / r32 n)
+let initial_ranks (n: i64): *[n]f32 =
+  replicate n (1 / f32.i64 n)
 
 let process_graph [m] [n] (links: [m]link) (sizes: [n]i32) (iterations: i32) =
   (calculate_ranks links (initial_ranks n) sizes iterations)

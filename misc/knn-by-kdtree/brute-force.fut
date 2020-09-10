@@ -11,7 +11,7 @@ let bruteForce [m][d][k] (query: [d]f32)
     loop (knns) = (copy knns0)
       --for (i,refpt) in (zip (iota m) refs) do
       --  let dist = f32.sqrt <| sumSqrsSeq query refpt in
-      for i < m do
+      for i < i32.i64 m do
         let dist = f32.sqrt <| sumSqrsSeq query (refs[i]) in
         if dist > knns[k-1].1 then knns -- early exit
         else let ref_ind = i+beg in

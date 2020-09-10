@@ -56,7 +56,7 @@ module type lys_core = {
   val event : event -> state -> state
 
   -- | The window was resized.
-  val resize : (h: i32) -> (w: i32) -> state -> state
+  val resize : (h: i64) -> (w: i64) -> state -> state
 
   -- | The function for rendering a screen image in row-major order
   -- (height by width).  The size of the array returned must match the
@@ -76,7 +76,7 @@ module type lys = {
   -- | Initial state for a given window size.  A random seed is passed
   -- in.  Don't treat this as a true random number (it's currently
   -- just a timestamp), but use it for initialising a proper RNG.
-  val init : (seed: u32) -> (h: i32) -> (w: i32) -> state
+  val init : (seed: u32) -> (h: i64) -> (w: i64) -> state
 
   -- | If true, the program will grab the mouse, and all positions
   -- reported via the `mouse`@term function will be relative to the
@@ -116,7 +116,7 @@ module lys_no_text = {
 -- | A dummy lys module that just produces a black rectangle and does
 -- nothing in response to events.
 module lys: lys_no_text = {
-  type state = {h: i32, w: i32}
+  type state = {h: i64, w: i64}
   let init _ h w = {h,w}
   let event _ s = s
   let resize h w _ = {h,w}
