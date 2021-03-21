@@ -17,14 +17,6 @@ let dotprod [n] (a: [n]f32) (b: [n]f32): f32 =
   map2 (*) a b
        |> reduce (+) 0
 
-
--------------------------------------------
----- lud_diagonal_omp -----
---
--- This version should be tuned and run with FUTHARK_INCREMENTAL_FLATTENING=1
--------------------------------------------
----------------------------------------------------------------------
----------------------------------------------------------------------
 let lud_diagonal [b] (a: [b][b]f32): *[b][b]f32 =
   map1 (\mat ->
           let mat = copy mat
@@ -47,12 +39,6 @@ let lud_diagonal [b] (a: [b][b]f32): *[b][b]f32 =
        ) (unflatten (opaque 1) b a)
        |> head
 
-------------------------------
-------------------------------
----- LUD Perimeter Upper -----
-------------------------------
-------------------------------
-
 let lud_perimeter_upper [m][b] (diag: [b][b]f32, a0s: [m][b][b]f32): *[m][b][b]f32 =
     let a1s = map (\ (x: [b][b]f32): [b][b]f32  -> transpose(x)) a0s in
     let a2s =
@@ -66,13 +52,6 @@ let lud_perimeter_upper [m][b] (diag: [b][b]f32, a0s: [m][b][b]f32): *[m][b][b]f
              ) a1s
     in map (\x: [b][b]f32 -> transpose(x)) a2s
 
-
-------------------------------
-------------------------------
----- LUD Perimeter Lower -----
-------------------------------
-------------------------------
-
 let lud_perimeter_lower [b][m] (diag: [b][b]f32, mat: [m][b][b]f32): *[m][b][b]f32 =
   map (\blk: [b][b]f32  ->
         map  (\ (row0: [b]f32): *[b]f32  ->   -- Lower
@@ -83,13 +62,6 @@ let lud_perimeter_lower [b][m] (diag: [b][b]f32, mat: [m][b][b]f32): *[m][b][b]f
                         in  row
             ) blk
       ) mat
-
-
-------------------------------
-------------------------------
-----     LUD Internal    -----
-------------------------------
-------------------------------
 
 let lud_internal [m][b] (top_per: [m][b][b]f32, lft_per: [m][b][b]f32, mat_slice: [m][m][b][b]f32 ): *[m][m][b][b]f32 =
   let top_slice = map transpose top_per in
@@ -110,9 +82,6 @@ let block_size: i64 = 32
 let pad_to [n] 'a (m: i64) (x: a) (arr: [n]a) : [m]a =
   arr ++ replicate (m - n) x :> [m]a
 
---------------------------------------------
----- Main Driver:
---------------------------------------------
 let main [m] (mat: [m][m]f32): [m][m]f32 =
     let b = block_size
     let num_blocks = (m+b-1) / b -- rounding up
@@ -123,11 +92,9 @@ let main [m] (mat: [m][m]f32): [m][m]f32 =
               then map (pad_to n 0) mat ++
                    replicate padding (replicate n 0f32)
               else mat :> [n][n]f32
-    -------------------------------------------------
     ---- transform matrix in [n/b,n/b,b,b] block ----
     ---- versions for upper and lower parts      ----
     ---- the blocks of the lower part            ----
-    -------------------------------------------------
     let matb =
         map  (\i_b: [num_blocks][b][b]f32  ->
                 map  (\j_b: [b][b]f32  ->
@@ -139,49 +106,31 @@ let main [m] (mat: [m][m]f32): [m][m]f32 =
                     ) (iota(num_blocks) )
             ) (iota(num_blocks) )
 
-    --------------------------------------
-    ---- sequential tiled loop driver ----
-    --------------------------------------
     let matb = loop(matb) for step < ((n / b) - 1) do
-        -----------------------------------------------
-        ---- 1. compute the current diagonal block ----
-        -----------------------------------------------
+        -- 1. compute the current diagonal block
         let diag = lud_diagonal(matb[step,step]) in
 
-        ----------------------------------------
-        ---- 2. compute the top  perimeter  ----
-        ----------------------------------------
+        -- 2. compute the top  perimeter
         let row_slice = matb[step,step+1:num_blocks]
         let top_per_irreg = lud_perimeter_upper(diag, row_slice)
-        
-        ----------------------------------------
-        ---- 3. compute the left perimeter  ----
-        ----    and update matrix           ----
-        ----------------------------------------
+
+        -- 3. compute the left perimeter and update matrix
         let col_slice = matb[step+1:num_blocks,step]
         let lft_per_irreg = lud_perimeter_lower(diag, col_slice)
-        
-        ----------------------------------------
-        ---- 4. compute the internal blocks ----
-        ----------------------------------------
+
+        -- 4. compute the internal blocks
         let inner_slice = matb[step+1:num_blocks,step+1:num_blocks]
         let internal = lud_internal(top_per_irreg, lft_per_irreg, inner_slice)
 
-        ----------------------------------------
-        ---- 5. update matrix in place      ----
-        ----------------------------------------
+        -- 5. update matrix in place
         let matb[step,step] = diag
         let matb[step, step+1:num_blocks] = top_per_irreg
         let matb[step+1:num_blocks, step] = lft_per_irreg
         let matb[step+1:num_blocks, step+1:num_blocks] = internal
-        
         in matb
-    ---------------------
-    -- LOOP ENDS HERE! --
-    ---------------------
 
     let last_step = (n / b) - 1 in
-    let matb[last_step,last_step] = 
+    let matb[last_step,last_step] =
             lud_diagonal( matb[last_step, last_step] )
 
     let ret_padded = map (\i_ind  ->
