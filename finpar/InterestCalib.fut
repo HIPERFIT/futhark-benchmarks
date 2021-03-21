@@ -566,7 +566,6 @@ let evalGenomeOnSwap (genomea: []f32,
   let h   = exactYhat( i32.i64 n_schedi, scals, exact_arrs, mux - eps )
 
   -- integration with Hermite polynomials
-  let herm_arrs   = zip4 bbs scales cs (t1_cs )
   let df          = 0.5 * ( g - h ) / eps
   let sqrt2sigmax = f32.sqrt(2.0) * sigmax
   let t2          = rhoxy / (sigmax*rhoxycs)
