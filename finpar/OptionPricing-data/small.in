@@ -16,25 +16,25 @@
 --	 md_c	 md_vols	 md_drifts	 md_starts	 md_detval	 md_disc
 
 [ [	 -- md_c[1][1] (begin)
-	[ 1.0000000  ]
+	[ 1.0000000f32  ]
 ] ]	 -- md_c (end)
 
 [ [	 -- md_vols[1][1] volatility (begin)
-	[ 0.1900000  ]
+	[ 0.1900000f32  ]
 ] ]	 -- md_vols volatility (end)
 
 [ [	 -- md_drifts[1][1] (begin)
-	[ -0.0276481070940405  ]
+	[ -0.0276481070940405f32  ]
 ] ]	 -- md_drifts (end)
 
 -- md_starts[1]
-[ [ 3758.0500000000001819 ] ]
+[ [ 3758.0500000000001819f32 ] ]
 
 -- model deterministic values [1]
-[ [ 0.9997817434496459  ] ]
+[ [ 0.9997817434496459f32  ] ]
 
 -- model discounts [1]
-[ [ 0.9805494836196852  ] ]
+[ [ 0.9805494836196852f32  ] ]
 
 -- Brownian Bridge (BB) Metadata
 
@@ -45,9 +45,8 @@
 ]
 
 --BB (real) data:
-[	[ 0.9889803798765787 ],	--bb_sd[1] (standard deviation)
-	[ 0.0000000000000000 ],	--bb_lw[1]
-	[ 0.0000000000000000 ]	--bb_rw[1]
+[	[ 0.9889803798765787f32 ],	--bb_sd[1] (standard deviation)
+	[ 0.0000000000000000f32 ],	--bb_lw[1]
+	[ 0.0000000000000000f32 ]	--bb_rw[1]
 ]
 
--- [(EXsimple_price(EUR, 98.05493927001953, "MC BS (C) 1dim, Sobol, 8388608 paths, 1060 ms"))]
