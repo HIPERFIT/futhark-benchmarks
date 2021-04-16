@@ -1,9 +1,9 @@
-main.suff_intra_par_14=32
-main.suff_intra_par_20=32
-main.suff_intra_par_22=32
-main.suff_intra_par_6=32
+main.suff_intra_par_0=32
+main.suff_intra_par_1=32
+main.suff_intra_par_3=32
+main.suff_intra_par_7=32
 main.suff_intra_par_8=32
-main.suff_outer_par_13=2000000000
-main.suff_outer_par_15=2000000000
-main.suff_outer_par_16=2000000000
-main.suff_outer_par_17=1024
+main.suff_outer_par_2=2000000000
+main.suff_outer_par_4=2000000000
+main.suff_outer_par_5=2000000000
+main.suff_outer_par_6=1024
