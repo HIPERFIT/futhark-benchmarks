@@ -46,28 +46,40 @@ let intraBlockPar [len] (B: i64)
 
   -- Process the first half (anti-diagonally) of the block
   let inp_l = loop inp_l for m < B do
-        let (inds, vals) = unzip (
+       let inds =
             -- tabulate over the m'th anti-diagonal before the middle
             tabulate B (\tx ->  (
-                    if tx > m then ((-1, -1), 0)
+                    if tx > m then (-1, -1)
+                    else let ind_x = i32.i64 (tx + 1)
+                         let ind_y = i32.i64 (m - tx + 1)
+                         in  (i64.i32 ind_y, i64.i32 ind_x)))
+        let vals =
+            -- tabulate over the m'th anti-diagonal before the middle
+            tabulate B (\tx ->  (
+                    if tx > m then 0
                     else let ind_x = i32.i64 (tx + 1)
                          let ind_y = i32.i64 (m - tx + 1)
                          let v = mkVal ind_y ind_x penalty inp_l ref_l
-                         in  ((i64.i32 ind_y, i64.i32 ind_x), v))))
+                         in  v))
         in  scatter_2d inp_l inds vals
 
   -- Process the second half (anti-diagonally) of the block
   let inp_l = loop inp_l for m < B-1 do
         let m = B - 2 - m
-        let (inds, vals) = unzip (
+        let inds = tabulate B (\tx ->  (
+                    if tx > m then (-1, -1)
+                    else let ind_x = i32.i64 (tx + B - m)
+                         let ind_y = i32.i64 (B - tx)
+                         in  ((i64.i32 ind_y, i64.i32 ind_x)) )
+                )
+        let vals =
             -- tabulate over the m'th anti-diagonal after the middle
             tabulate B (\tx ->  (
-                    if tx > m then ((-1, -1), 0)
+                    if tx > m then (0)
                     else let ind_x = i32.i64 (tx + B - m)
                          let ind_y = i32.i64 (B - tx)
                          let v = mkVal ind_y ind_x penalty inp_l ref_l
-                         in  ((i64.i32 ind_y, i64.i32 ind_x), v) )
-                ))
+                         in  v ))
         in  scatter_2d inp_l inds vals
 
   let inp_l2 = inp_l
@@ -99,6 +111,7 @@ let updateBlocks [q][len] (B: i64)
 let main [len] (penalty : i32)
                  (inputsets : *[len][len]i32)
                  (reference : *[len][len]i32) : *[len][len]i32 =
+  #[unsafe]
   let worksize = len - 1
   let B = i64.min worksize B0
 
