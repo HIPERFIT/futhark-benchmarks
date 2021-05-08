@@ -36,9 +36,7 @@ let step [n][e]
         (graph_visited: [n]bool)
         (graph_mask: *[n]bool)
         (updating_graph_mask: *[n]bool) : (*[n]i32, *[n]bool, *[n]bool) =
-  let (active_indices, _) = unzip (filter (.1) (zip (iota n) graph_mask))
-  let n_indices = length active_indices
-  let active_indices = active_indices :> [n_indices]i64
+  let [n_indices] (active_indices : [n_indices]i64, _) = unzip (filter (.1) (zip (iota n) graph_mask))
   let graph_mask' =
     scatter graph_mask active_indices (map (const false) active_indices)
 

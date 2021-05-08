@@ -69,8 +69,7 @@ let particleFilter [IszX][IszY][Nfr]
   let ye = f64.round (f64.i64 IszX / 2)
   let radius = 5i64
   let [diameter] (disk: [diameter][diameter]i32) = strelDisk radius
-  let objxy = getneighbors disk radius
-  let countOnes = length objxy
+  let [countOnes] (objxy: [countOnes](f64, f64)) = getneighbors disk radius
   let weights = replicate Nparticles (1 / f64.i64 Nparticles)
   let arrayX = replicate Nparticles xe
   let arrayY = replicate Nparticles ye
