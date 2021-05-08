@@ -26,12 +26,6 @@ let common_main [n][e] (step: step_fn [n][e])
           step cost nodes_start_index nodes_n_edges edges_dest
                graph_visited graph_mask updating_graph_mask
 
-        -- Make the sizes obvious.
-        let updating_graph_mask' =
-          updating_graph_mask' :> *[n]bool
-        let cost' =
-          cost' :> *[n]i32
-
         let step2_inds = map2 (\x i -> if x then i else -1) updating_graph_mask' (iota n)
 
         let graph_visited' =
